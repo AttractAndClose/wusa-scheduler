@@ -12,6 +12,9 @@ import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import type { Address, SlotAvailability } from '@/types';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [availability, setAvailability] = useState<SlotAvailability[][]>([]);

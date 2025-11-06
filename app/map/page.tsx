@@ -13,6 +13,9 @@ import { format, addDays, parseISO } from 'date-fns';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import type { SalesRep, Appointment, Address } from '@/types';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 // Dynamically import Leaflet to avoid SSR issues
 const MapComponent = dynamic(() => import('@/components/map/ScheduleMap'), {
   ssr: false,

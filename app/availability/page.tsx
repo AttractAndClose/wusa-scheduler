@@ -10,6 +10,9 @@ import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loade
 import { format, parseISO } from 'date-fns';
 import type { SalesRep, Appointment, Availability, TimeSlot } from '@/types';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
 const TIME_SLOTS: TimeSlot[] = ['10am', '2pm', '7pm'];
 const DAYS: (keyof Availability[string])[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
