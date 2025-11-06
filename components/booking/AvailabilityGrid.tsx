@@ -2,6 +2,7 @@
 
 import { SlotCard } from './SlotCard';
 import type { SlotAvailability } from '@/types';
+import { format, parseISO } from 'date-fns';
 
 interface AvailabilityGridProps {
   availability: SlotAvailability[][];
@@ -17,39 +18,57 @@ export function AvailabilityGrid({ availability, onSlotSelect }: AvailabilityGri
     );
   }
 
+  // Get the first date to determine the week
+  const firstDate = availability[0]?.[0]?.date;
+  if (!firstDate) return null;
+
+  const startDate = parseISO(firstDate);
+  const endDate = parseISO(availability[availability.length - 1]?.[0]?.date || firstDate);
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-navy">Available Appointments</h2>
-      
-      <div className="grid gap-4">
-        {availability.map((daySlots, dayIndex) => (
-          <div key={dayIndex} className="space-y-2">
-            {daySlots.map((slot, slotIndex) => (
-              <SlotCard
-                key={`${slot.date}-${slot.timeSlot}`}
-                slot={slot}
-                onSelect={onSlotSelect}
-              />
-            ))}
-          </div>
-        ))}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-navy">Available Appointments</h2>
+        <div className="text-sm text-navy/70">
+          {format(startDate, 'MMM d')} - {format(endDate, 'MMM d, yyyy')}
+        </div>
       </div>
       
-      <div className="flex items-center gap-4 text-sm text-navy/70 pt-4 border-t border-gray-300">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-primary"></div>
-          <span>Good (3+ reps)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
-          <span>Limited (1-2 reps)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-gray-dark"></div>
-          <span>None</span>
-        </div>
+      {/* Column-based grid */}
+      <div className="grid grid-cols-5 gap-4">
+        {availability.map((daySlots, dayIndex) => {
+          const dayDate = daySlots[0]?.date;
+          if (!dayDate) return null;
+          
+          const date = parseISO(dayDate);
+          const dayName = format(date, 'EEE').toUpperCase();
+          const dayNumber = format(date, 'd');
+          const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+          
+          return (
+            <div key={dayIndex} className="flex flex-col">
+              {/* Day Header */}
+              <div className={`text-center mb-3 ${isToday ? 'bg-navy text-white rounded-t-lg py-2' : 'text-navy/70 py-2'}`}>
+                <div className="text-xs font-medium">{dayName}</div>
+                <div className={`text-lg font-bold ${isToday ? 'text-white' : 'text-navy'}`}>
+                  {dayNumber}
+                </div>
+              </div>
+              
+              {/* Time Slots Column */}
+              <div className="flex-1 space-y-2">
+                {daySlots.map((slot) => (
+                  <SlotCard
+                    key={`${slot.date}-${slot.timeSlot}`}
+                    slot={slot}
+                    onSelect={onSlotSelect}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
-
