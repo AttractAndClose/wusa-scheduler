@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Phone, Mail } from 'lucide-react';
@@ -13,10 +14,18 @@ const TIME_SLOTS: TimeSlot[] = ['10am', '2pm', '7pm'];
 const DAYS: (keyof Availability[string])[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
 export default function AvailabilityPage() {
+  const { isLoaded, isSignedIn, user } = useUser();
   const [reps, setReps] = useState<SalesRep[]>([]);
   const [availability, setAvailability] = useState<Availability>({});
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect if not signed in
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      window.location.href = '/sign-in';
+    }
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     async function loadData() {
@@ -46,7 +55,7 @@ export default function AvailabilityPage() {
     );
   };
 
-  if (isLoading) {
+  if (!isLoaded || !isSignedIn || isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

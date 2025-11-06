@@ -6,6 +6,7 @@ import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { Button } from '@/components/ui/button';
 import { MapPin } from 'lucide-react';
+import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
@@ -96,7 +97,7 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">
               Sales Appointment Scheduler
             </h1>
-            <nav className="flex gap-4">
+            <nav className="flex items-center gap-4">
               <Link href="/availability">
                 <Button variant="outline">Manage Availability</Button>
               </Link>
@@ -106,6 +107,7 @@ export default function Home() {
                   View Map
                 </Button>
               </Link>
+              <UserButton afterSignOutUrl="/" />
             </nav>
           </div>
         </div>

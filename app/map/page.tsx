@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useUser } from '@clerk/nextjs';
 import dynamic from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const MapComponent = dynamic(() => import('@/components/map/ScheduleMap'), {
 });
 
 export default function MapPage() {
+  const { isLoaded, isSignedIn } = useUser();
   const [reps, setReps] = useState<SalesRep[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [availability, setAvailability] = useState<any>({});
@@ -26,6 +28,13 @@ export default function MapPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<'10am' | '2pm' | '7pm'>('2pm');
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Redirect if not signed in
+  useEffect(() => {
+    if (isLoaded && !isSignedIn) {
+      window.location.href = '/sign-in';
+    }
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     async function loadData() {
