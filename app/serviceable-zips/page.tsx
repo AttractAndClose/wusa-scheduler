@@ -191,14 +191,6 @@ function ServiceableZipsContent() {
                 ))}
               </select>
             </div>
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges}
-              className="bg-primary hover:bg-primary-dark text-white"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
           </div>
           <div className="mt-4 text-sm text-navy/70">
             Showing {filteredZips.length} of {zips.length} zip codes
