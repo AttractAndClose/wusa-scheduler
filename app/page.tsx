@@ -13,7 +13,7 @@ import Link from 'next/link';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import type { Address, SlotAvailability } from '@/types';
-import { startOfWeek, addWeeks, addDays } from 'date-fns';
+import { startOfWeek, addWeeks } from 'date-fns';
 
 // Dynamically import AddressMap to avoid SSR issues with Leaflet
 const AddressMap = dynamic(() => import('@/components/booking/AddressMap').then(mod => ({ default: mod.AddressMap })), {
@@ -74,10 +74,10 @@ function HomeContent() {
   }, [searchParams]);
 
   // Calculate the start date for the current week view
-  const getWeekStartDate = () => {
+  const getWeekStartDate = (offset: number = weekOffset) => {
     const today = new Date();
     const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-    return addWeeks(currentWeekStart, weekOffset);
+    return addWeeks(currentWeekStart, offset);
   };
 
   // Recalculate availability when week changes
@@ -137,7 +137,7 @@ function HomeContent() {
   const handleWeekChange = (direction: 'prev' | 'next') => {
     const newOffset = direction === 'next' ? weekOffset + 1 : weekOffset - 1;
     setWeekOffset(newOffset);
-    const newStartDate = getWeekStartDate();
+    const newStartDate = getWeekStartDate(newOffset);
     recalculateAvailability(newStartDate);
   };
 
