@@ -345,7 +345,7 @@ export function CensusStats({ address }: CensusStatsProps) {
               <GraduationCap className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-navy/60 font-medium">Bachelor's Degree or Higher</div>
+              <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
               <div className="text-lg font-semibold text-navy">
                 {censusData.education}%
               </div>
@@ -516,7 +516,7 @@ export function CensusStats({ address }: CensusStatsProps) {
               <GraduationCap className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <div className="text-xs text-navy/60 font-medium">Bachelor's Degree or Higher</div>
+              <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
               <div className="text-lg font-semibold text-navy">
                 {censusData.bachelorsOrHigher}%
               </div>

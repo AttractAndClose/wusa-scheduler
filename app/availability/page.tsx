@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import { format, parseISO } from 'date-fns';
-import type { SalesRep, Appointment, Availability, TimeSlot, Address } from '@/types';
+import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep } from '@/types';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -109,7 +109,7 @@ function AvailabilityContent() {
     let availableSlots = 0;
     addressAvailability.forEach((daySlots) => {
       daySlots.forEach((slot) => {
-        if (slot.availableReps.some(rep => rep.repId === repId)) {
+        if (slot.availableReps.some((rep: AvailableRep) => rep.repId === repId)) {
           availableSlots++;
         }
       });
