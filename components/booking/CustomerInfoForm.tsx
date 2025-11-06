@@ -320,6 +320,10 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     };
   };
 
+  const formatAddressString = (address: Address): string => {
+    return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
+  };
+
   const handleAddressFound = async (address: Address) => {
     // Check if zip code is serviceable
     const zipCheck = await isZipServiceable(address.zip);
