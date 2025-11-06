@@ -58,6 +58,12 @@ function generateAppointments() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
+  // Track appointments per rep to ensure each rep gets at least some appointments
+  const repAppointmentCounts = {};
+  reps.forEach(rep => {
+    repAppointmentCounts[rep.id] = 0;
+  });
+  
   // Generate appointments for the next 30 days
   for (let dayOffset = 0; dayOffset < 30; dayOffset++) {
     const appointmentDate = new Date(today);
@@ -75,7 +81,10 @@ function generateAppointments() {
       
       // Randomly assign appointments (30% chance per available slot)
       repAvailability[dayOfWeek].forEach((slot) => {
-        if (Math.random() < 0.3) { // 30% chance of booking
+        // If rep has fewer than 3 appointments, increase chance to 60%
+        const bookingChance = repAppointmentCounts[rep.id] < 3 ? 0.6 : 0.3;
+        
+        if (Math.random() < bookingChance) {
           const customerName = customerNames[Math.floor(Math.random() * customerNames.length)];
           
           // Generate customer address near rep's location (within same city/state)
@@ -100,10 +109,68 @@ function generateAppointments() {
             status: 'scheduled',
             createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
           });
+          
+          repAppointmentCounts[rep.id]++;
         }
       });
     });
   }
+  
+  // Ensure every rep has at least 3 appointments
+  const minAppointmentsPerRep = 3;
+  reps.forEach(rep => {
+    while (repAppointmentCounts[rep.id] < minAppointmentsPerRep) {
+      // Find available slots for this rep in the next 30 days
+      for (let dayOffset = 0; dayOffset < 30 && repAppointmentCounts[rep.id] < minAppointmentsPerRep; dayOffset++) {
+        const appointmentDate = new Date(today);
+        appointmentDate.setDate(today.getDate() + dayOffset);
+        const dayOfWeek = dayNames[appointmentDate.getDay()];
+        const dateString = appointmentDate.toISOString().split('T')[0];
+        
+        const repAvailability = availability[rep.id];
+        if (!repAvailability || !repAvailability[dayOfWeek]) {
+          continue;
+        }
+        
+        // Check if rep already has an appointment on this day/time
+        const existingAppointments = appointments.filter(
+          apt => apt.repId === rep.id && apt.date === dateString
+        );
+        const bookedSlots = new Set(existingAppointments.map(apt => apt.timeSlot));
+        
+        // Find an available slot
+        const availableSlots = repAvailability[dayOfWeek].filter(slot => !bookedSlots.has(slot));
+        if (availableSlots.length > 0) {
+          const slot = availableSlots[0];
+          const customerName = customerNames[Math.floor(Math.random() * customerNames.length)];
+          
+          const customerAddress = {
+            street: `${Math.floor(Math.random() * 9999) + 100} ${['Main St', 'Oak Ave', 'Park Blvd', 'Maple Dr', 'Cedar Ln', 'Pine St', 'Elm St'][Math.floor(Math.random() * 7)]}`,
+            city: rep.startingAddress.city,
+            state: rep.startingAddress.state,
+            zip: rep.startingAddress.zip,
+            lat: rep.startingAddress.lat + (Math.random() - 0.5) * 0.1,
+            lng: rep.startingAddress.lng + (Math.random() - 0.5) * 0.1
+          };
+          
+          appointments.push({
+            id: `apt-${Date.now()}-${appointments.length}`,
+            repId: rep.id,
+            date: dateString,
+            timeSlot: slot,
+            customerName: customerName,
+            customerPhone: generatePhoneNumber(rep.startingAddress.state),
+            customerEmail: `${customerName.toLowerCase().replace(/\s+/g, '.')}@email.com`,
+            address: customerAddress,
+            status: 'scheduled',
+            createdAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString()
+          });
+          
+          repAppointmentCounts[rep.id]++;
+        }
+      }
+    }
+  });
   
   return appointments;
 }

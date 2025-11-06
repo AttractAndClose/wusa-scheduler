@@ -7,6 +7,8 @@ import { UserButton } from '@clerk/nextjs';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { MapPin, Calendar, Phone, Mail, Clock } from 'lucide-react';
 import { getAllAppointments, loadReps } from '@/lib/data-loader';
 import type { Appointment } from '@/types';
@@ -18,7 +20,9 @@ function AppointmentsContent() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [reps, setReps] = useState<any[]>([]);
+  const [selectedRepId, setSelectedRepId] = useState<string>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ function AppointmentsContent() {
         });
 
         setAppointments(futureAppointments);
+        setFilteredAppointments(futureAppointments);
         setReps(repsData);
       } catch (error) {
         console.error('Error loading appointments:', error);
@@ -65,6 +70,15 @@ function AppointmentsContent() {
 
     loadData();
   }, [user, isLoaded, router]);
+
+  // Filter appointments by selected rep
+  useEffect(() => {
+    if (selectedRepId === 'all') {
+      setFilteredAppointments(appointments);
+    } else {
+      setFilteredAppointments(appointments.filter(apt => apt.repId === selectedRepId));
+    }
+  }, [selectedRepId, appointments]);
 
   const getRepName = (repId: string) => {
     const rep = reps.find(r => r.id === repId);
@@ -141,18 +155,43 @@ function AppointmentsContent() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy mb-2">Scheduled Appointments</h1>
           <p className="text-navy/70">
-            Showing {appointments.length} appointment{appointments.length !== 1 ? 's' : ''} from today onwards
+            Showing {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''} from today onwards
           </p>
         </div>
 
-        {appointments.length === 0 ? (
+        {/* Rep Filter Dropdown */}
+        <Card className="p-4 mb-6 border border-gray-300 bg-white">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="rep-filter" className="text-navy font-medium">Filter by Rep:</Label>
+            <Select value={selectedRepId} onValueChange={setSelectedRepId}>
+              <SelectTrigger id="rep-filter" className="w-64 border-gray-300">
+                <SelectValue placeholder="All Reps" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Reps</SelectItem>
+                {reps.map(rep => (
+                  <SelectItem key={rep.id} value={rep.id}>
+                    {rep.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </Card>
+
+        {filteredAppointments.length === 0 ? (
           <Card className="p-8 text-center border border-gray-300 bg-white">
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-navy/70 text-lg">No upcoming appointments</p>
+            <p className="text-navy/70 text-lg">
+              {selectedRepId === 'all' 
+                ? 'No upcoming appointments'
+                : `No upcoming appointments for ${getRepName(selectedRepId)}`
+              }
+            </p>
           </Card>
         ) : (
           <div className="space-y-4">
-            {appointments.map((apt) => {
+            {filteredAppointments.map((apt) => {
               const repName = getRepName(apt.repId);
               const repColor = getRepColor(apt.repId);
               const aptDate = parseISO(apt.date);
