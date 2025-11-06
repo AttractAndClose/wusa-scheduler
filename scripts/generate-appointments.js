@@ -87,9 +87,14 @@ function generateAppointments() {
   const targetAppointmentsPerRep = {};
   reps.forEach(rep => {
     targetAppointmentsPerRep[rep.id] = Math.floor(repTotalSlots[rep.id] * 0.5);
+    // Ensure minimum of 5 appointments per rep
+    if (targetAppointmentsPerRep[rep.id] < 5 && repTotalSlots[rep.id] > 0) {
+      targetAppointmentsPerRep[rep.id] = Math.min(5, repTotalSlots[rep.id]);
+    }
   });
   
   // Generate appointments for the next 3 weeks (21 days)
+  // Use a more deterministic approach to ensure we hit targets
   for (let dayOffset = 0; dayOffset < 21; dayOffset++) {
     const appointmentDate = new Date(today);
     appointmentDate.setDate(today.getDate() + dayOffset);
@@ -115,51 +120,57 @@ function generateAppointments() {
         return;
       }
       
-      // Calculate probability: distribute remaining appointments across remaining days
-      // Higher probability if we're behind schedule
+      // Calculate how many slots to book today
       const slotsToday = repAvailability[dayOfWeek].length;
-      const avgNeededPerDay = needed / Math.max(remainingDays, 1);
-      const probability = Math.min(0.7, Math.max(0.3, avgNeededPerDay / slotsToday));
+      const slotsNeededToday = Math.ceil(needed / Math.max(remainingDays, 1));
+      const slotsToBook = Math.min(slotsNeededToday, slotsToday);
       
-      repAvailability[dayOfWeek].forEach((slot) => {
+      // Get available slots for today (not already booked)
+      const availableSlots = repAvailability[dayOfWeek].filter(slot => {
+        const slotKey = `${dateString}-${slot}`;
+        return !repBookedSlots[rep.id].has(slotKey);
+      });
+      
+      // Shuffle available slots to randomize which ones get booked
+      const shuffledSlots = [...availableSlots].sort(() => Math.random() - 0.5);
+      
+      // Book the required number of slots
+      for (let i = 0; i < Math.min(slotsToBook, shuffledSlots.length) && repAppointmentCounts[rep.id] < targetCount; i++) {
+        const slot = shuffledSlots[i];
         const slotKey = `${dateString}-${slot}`;
         
-        // Skip if already booked
         if (repBookedSlots[rep.id].has(slotKey)) {
-          return;
+          continue;
         }
         
-        // Book this slot if we haven't reached target and probability check passes
-        if (currentCount < targetCount && Math.random() < probability) {
-          const customerName = customerNames[Math.floor(Math.random() * customerNames.length)];
-          
-          // Generate customer address near rep's location (within same city/state)
-          const customerAddress = {
-            street: `${Math.floor(Math.random() * 9999) + 100} ${['Main St', 'Oak Ave', 'Park Blvd', 'Maple Dr', 'Cedar Ln', 'Pine St', 'Elm St'][Math.floor(Math.random() * 7)]}`,
-            city: rep.startingAddress.city,
-            state: rep.startingAddress.state,
-            zip: rep.startingAddress.zip,
-            lat: rep.startingAddress.lat + (Math.random() - 0.5) * 0.1, // Within ~10 miles
-            lng: rep.startingAddress.lng + (Math.random() - 0.5) * 0.1
-          };
-          
-          appointments.push({
-            id: `apt-${Date.now()}-${appointments.length}`,
-            repId: rep.id,
-            date: dateString,
-            timeSlot: slot,
-            customerName: customerName,
-            customerPhone: generatePhoneNumber(rep.startingAddress.state),
-            customerEmail: `${customerName.toLowerCase().replace(/\s+/g, '.')}@email.com`,
-            address: customerAddress,
-            status: 'scheduled',
-            createdAt: new Date(Date.now() - Math.random() * 21 * 24 * 60 * 60 * 1000).toISOString()
-          });
-          
-          repAppointmentCounts[rep.id]++;
-          repBookedSlots[rep.id].add(slotKey);
-        }
-      });
+        const customerName = customerNames[Math.floor(Math.random() * customerNames.length)];
+        
+        // Generate customer address near rep's location (within same city/state)
+        const customerAddress = {
+          street: `${Math.floor(Math.random() * 9999) + 100} ${['Main St', 'Oak Ave', 'Park Blvd', 'Maple Dr', 'Cedar Ln', 'Pine St', 'Elm St'][Math.floor(Math.random() * 7)]}`,
+          city: rep.startingAddress.city,
+          state: rep.startingAddress.state,
+          zip: rep.startingAddress.zip,
+          lat: rep.startingAddress.lat + (Math.random() - 0.5) * 0.1, // Within ~10 miles
+          lng: rep.startingAddress.lng + (Math.random() - 0.5) * 0.1
+        };
+        
+        appointments.push({
+          id: `apt-${Date.now()}-${appointments.length}-${Math.random().toString(36).substr(2, 9)}`,
+          repId: rep.id,
+          date: dateString,
+          timeSlot: slot,
+          customerName: customerName,
+          customerPhone: generatePhoneNumber(rep.startingAddress.state),
+          customerEmail: `${customerName.toLowerCase().replace(/\s+/g, '.')}@email.com`,
+          address: customerAddress,
+          status: 'scheduled',
+          createdAt: new Date(Date.now() - Math.random() * 21 * 24 * 60 * 60 * 1000).toISOString()
+        });
+        
+        repAppointmentCounts[rep.id]++;
+        repBookedSlots[rep.id].add(slotKey);
+      }
     });
   }
   
@@ -205,7 +216,7 @@ function generateAppointments() {
           };
           
           appointments.push({
-            id: `apt-${Date.now()}-${appointments.length}`,
+            id: `apt-${Date.now()}-${appointments.length}-${Math.random().toString(36).substr(2, 9)}`,
             repId: rep.id,
             date: dateString,
             timeSlot: slot,
@@ -230,7 +241,7 @@ function generateAppointments() {
     const total = repTotalSlots[rep.id];
     const booked = repAppointmentCounts[rep.id];
     const percentage = total > 0 ? ((booked / total) * 100).toFixed(1) : 0;
-    console.log(`${rep.name}: ${booked}/${total} slots (${percentage}%)`);
+    console.log(`${rep.name} (${rep.id}): ${booked}/${total} slots (${percentage}%)`);
   });
   
   return appointments;
