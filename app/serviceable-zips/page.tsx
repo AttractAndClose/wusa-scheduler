@@ -75,27 +75,31 @@ function ServiceableZipsContent() {
   }, [searchTerm, stateFilter, zips]);
 
   const handleExcludedChange = (zip: string, excluded: boolean) => {
-    setZips(prevZips =>
-      prevZips.map(z =>
-        z.zip === zip ? { ...z, excluded } : z
-      )
+    const updatedZips = zips.map(z =>
+      z.zip === zip ? { ...z, excluded } : z
     );
-    setHasChanges(true);
+    setZips(updatedZips);
+    setFilteredZips(updatedZips.filter(z => {
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        return z.zip.toLowerCase().includes(term) ||
+          z.county.toLowerCase().includes(term) ||
+          z.state.toLowerCase().includes(term) ||
+          z.stateName.toLowerCase().includes(term);
+      }
+      return true;
+    }).filter(z => stateFilter ? z.state === stateFilter : true));
+    // Auto-save
+    saveServiceableZips(updatedZips);
   };
 
   const handleNotesChange = (zip: string, notes: string) => {
-    setZips(prevZips =>
-      prevZips.map(z =>
-        z.zip === zip ? { ...z, notes } : z
-      )
+    const updatedZips = zips.map(z =>
+      z.zip === zip ? { ...z, notes } : z
     );
-    setHasChanges(true);
-  };
-
-  const handleSave = () => {
-    saveServiceableZips(zips);
-    setHasChanges(false);
-    alert('Serviceable zip codes saved successfully!');
+    setZips(updatedZips);
+    // Auto-save
+    saveServiceableZips(updatedZips);
   };
 
   const states = ['AL', 'AR', 'GA', 'IL', 'KS', 'KY', 'LA', 'MS', 'MO', 'NC', 'OK', 'SC', 'TN', 'TX'];
@@ -161,7 +165,7 @@ function ServiceableZipsContent() {
         </div>
 
         {/* Filters and Actions */}
-        <Card className="p-4 mb-6 border border-gray-300">
+        <Card className="p-4 mb-6 border border-gray-300 bg-white">
           <div className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1">
               <Label htmlFor="search" className="text-navy mb-1">Search</Label>
