@@ -3,13 +3,11 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
-import { UserButton } from '@clerk/nextjs';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { MapPin, Calendar, Phone, Mail, Clock } from 'lucide-react';
+import { Calendar, Phone, Mail, Clock, MapPin } from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { getAllAppointments, loadReps } from '@/lib/data-loader';
 import type { Appointment } from '@/types';
 import { format, parseISO, isAfter, startOfDay } from 'date-fns';
@@ -110,47 +108,7 @@ function AppointmentsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-light">
-      <header className="bg-white border-b-2 border-primary shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center">
-                <img
-                  src="/windowsusa-logo.png"
-                  alt="Windows USA"
-                  className="h-10 w-auto"
-                />
-              </Link>
-            </div>
-            <nav className="flex items-center gap-4">
-              <Link href="/availability">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Rep Availability
-                </Button>
-              </Link>
-              <Link href="/appointments">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white bg-primary text-white border-primary">
-                  Scheduled Appointments
-                </Button>
-              </Link>
-              <Link href="/serviceable-zips">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Serviceable Zip Codes
-                </Button>
-              </Link>
-              <Link href="/map">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  View Map
-                </Button>
-              </Link>
-              <UserButton afterSignOutUrl="/" />
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy mb-2">Scheduled Appointments</h1>
@@ -261,7 +219,7 @@ function AppointmentsContent() {
           </div>
         )}
       </main>
-    </div>
+    </AppLayout>
   );
 }
 

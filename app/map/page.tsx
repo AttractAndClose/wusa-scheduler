@@ -4,11 +4,8 @@ import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
 import dynamicImport from 'next/dynamic';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin } from 'lucide-react';
-import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { loadReps, getAllAppointments, loadAvailability } from '@/lib/data-loader';
 import { format, addDays, parseISO } from 'date-fns';
 import { calculateAvailabilityGrid } from '@/lib/availability';
@@ -89,49 +86,7 @@ export default function MapPage() {
   }, [customerAddress, selectedDate, reps, availability, appointments]);
 
   return (
-    <div className="min-h-screen bg-gray-light">
-      {/* Header */}
-      <header className="bg-white border-b-2 border-primary shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center">
-                <img 
-                  src="/windowsusa-logo.png" 
-                  alt="Windows USA" 
-                  className="h-10 w-auto"
-                />
-              </Link>
-            </div>
-            <nav className="flex items-center gap-4">
-            <Link href="/availability">
-              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                Rep Availability
-              </Button>
-            </Link>
-            <Link href="/appointments">
-              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                Scheduled Appointments
-              </Button>
-            </Link>
-            <Link href="/serviceable-zips">
-              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                Serviceable Zip Codes
-              </Button>
-            </Link>
-            <Link href="/map">
-              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                <MapPin className="mr-2 h-4 w-4" />
-                View Map
-              </Button>
-            </Link>
-              <UserButton afterSignOutUrl="/" />
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+    <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {/* Controls */}
@@ -272,7 +227,7 @@ export default function MapPage() {
           )}
         </div>
       </main>
-    </div>
+    </AppLayout>
   );
 }
 

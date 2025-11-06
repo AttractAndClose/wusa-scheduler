@@ -4,14 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search, MapPin } from 'lucide-react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { UserButton } from '@clerk/nextjs';
+import { Search } from 'lucide-react';
+import { AppLayout } from '@/components/layout/AppLayout';
 import { getAllServiceableZips, saveServiceableZips } from '@/lib/serviceable-zips';
 import type { ServiceableZip } from '@/types/serviceable-zips';
 
@@ -132,49 +129,7 @@ function ServiceableZipsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-light">
-      {/* Header */}
-      <header className="bg-white border-b-2 border-primary shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center">
-                <img 
-                  src="/windowsusa-logo.png" 
-                  alt="Windows USA" 
-                  className="h-10 w-auto"
-                />
-              </Link>
-            </div>
-            <nav className="flex items-center gap-4">
-              <Link href="/availability">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Rep Availability
-                </Button>
-              </Link>
-              <Link href="/appointments">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Scheduled Appointments
-                </Button>
-              </Link>
-              <Link href="/serviceable-zips">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Serviceable Zip Codes
-                </Button>
-              </Link>
-              <Link href="/map">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  View Map
-                </Button>
-              </Link>
-              <UserButton afterSignOutUrl="/" />
-            </nav>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
+    <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy mb-2">Serviceable Zip Codes</h1>
@@ -269,7 +224,7 @@ function ServiceableZipsContent() {
           </div>
         </Card>
       </main>
-    </div>
+    </AppLayout>
   );
 }
 
