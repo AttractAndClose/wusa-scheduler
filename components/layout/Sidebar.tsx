@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useUser, UserButton } from '@clerk/nextjs';
-import { Calendar, Users, Clock, MapPin, FileText } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUser, UserButton, useClerk } from '@clerk/nextjs';
+import { Calendar, Users, Clock, MapPin, FileText, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navigation = [
@@ -17,11 +17,18 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname();
   const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/');
+  };
 
   return (
     <div className="flex h-screen w-64 flex-col bg-white border-r-2 border-primary shadow-sm">
-      {/* Logo */}
-      <div className="flex h-16 items-center px-6 border-b border-gray-200">
+      {/* Logo - Centered */}
+      <div className="flex h-16 items-center justify-center px-6 border-b border-gray-200">
         <Link href="/" className="flex items-center">
           <img
             src="/windowsusa-logo.png"
@@ -31,11 +38,9 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - No highlight style */}
       <nav className="flex-1 space-y-1 px-3 py-4">
         {navigation.map((item) => {
-          const isActive = pathname === item.href || 
-            (item.href !== '/' && pathname?.startsWith(item.href));
           const Icon = item.icon;
           
           return (
@@ -43,16 +48,10 @@ export function Sidebar() {
               key={item.name}
               href={item.href}
               className={cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-white'
-                  : 'text-navy hover:bg-gray-light hover:text-primary'
+                'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-navy hover:bg-gray-light hover:text-primary'
               )}
             >
-              <Icon className={cn(
-                'h-5 w-5',
-                isActive ? 'text-white' : 'text-navy group-hover:text-primary'
-              )} />
+              <Icon className="h-5 w-5 text-navy group-hover:text-primary" />
               {item.name}
             </Link>
           );
@@ -61,16 +60,20 @@ export function Sidebar() {
 
       {/* User Section */}
       {isLoaded && user && (
-        <div className="border-t border-gray-200 p-4">
+        <div className="border-t border-gray-200 p-4 space-y-3">
+          {/* User Info with Clickable UserButton */}
           <div className="flex items-center gap-3">
-            <UserButton 
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: 'h-10 w-10'
-                }
-              }}
-            />
+            <div className="relative">
+              <UserButton 
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: 'h-10 w-10 cursor-pointer',
+                    userButtonPopoverCard: 'shadow-lg',
+                  }
+                }}
+              />
+            </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-navy truncate">
                 {user.firstName || user.lastName 
@@ -85,9 +88,17 @@ export function Sidebar() {
               )}
             </div>
           </div>
+
+          {/* Logout Link */}
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 w-full text-sm text-navy hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-gray-light"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Log Out</span>
+          </button>
         </div>
       )}
     </div>
   );
 }
-
