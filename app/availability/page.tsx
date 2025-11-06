@@ -330,6 +330,10 @@ function AvailabilityContent() {
                           {rep.phone}
                         </div>
                         <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4" />
+                          {rep.startingAddress.street}, {rep.startingAddress.city}, {rep.startingAddress.state} {rep.startingAddress.zip}
+                        </div>
+                        <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4" />
                           {repAppointments.length} appointment{repAppointments.length !== 1 ? 's' : ''} scheduled
                         </div>
