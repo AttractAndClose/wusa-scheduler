@@ -17,10 +17,14 @@ export default function RootLayout({
   // Get Clerk keys - use empty string fallback to prevent build errors
   const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
   
-  // If no key, render without ClerkProvider (for development)
+  // Always render html/body structure to ensure CSS loads
+  // CSS import at top ensures it's always included
   if (!publishableKey) {
     return (
       <html lang="en">
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </head>
         <body>{children}</body>
       </html>
     );
@@ -35,6 +39,9 @@ export default function RootLayout({
       afterSignOutUrl="/"
     >
       <html lang="en">
+        <head>
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+        </head>
         <body>{children}</body>
       </html>
     </ClerkProvider>
