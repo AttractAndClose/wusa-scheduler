@@ -38,10 +38,16 @@ function ServiceableZipsContent() {
   useEffect(() => {
     async function loadZips() {
       setIsLoading(true);
-      const data = await getAllServiceableZips();
-      setZips(data);
-      setFilteredZips(data);
-      setIsLoading(false);
+      try {
+        const data = await getAllServiceableZips();
+        console.log('Loaded zip codes:', data.length);
+        setZips(data);
+        setFilteredZips(data);
+      } catch (error) {
+        console.error('Error loading zip codes:', error);
+      } finally {
+        setIsLoading(false);
+      }
     }
     loadZips();
   }, []);
