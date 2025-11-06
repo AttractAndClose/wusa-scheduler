@@ -46,6 +46,8 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [addressError, setAddressError] = useState<string>('');
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const autocompleteInstanceRef = useRef<any>(null);
   const geocoderRef = useRef<any>(null);
@@ -133,14 +135,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
 
   // Auto-geocode address when address from initialData changes
   useEffect(() => {
-    if (initialData?.address && initialData.address !== addressInput) {
+    if (initialData?.address && initialData.address !== addressInput && !hasAutoSubmitted) {
       setAddressInput(initialData.address);
       // Wait a bit for Google Maps to load if needed
       const timer = setTimeout(() => {
-        if (window.google?.maps?.Geocoder) {
-          geocodeAddress(initialData.address!);
-        }
-      }, 1000);
+        geocodeAddress(initialData.address!, true); // true = auto-submit
+      }, 1500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -178,31 +178,67 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     }
   };
 
-  const geocodeAddress = (addressString: string) => {
-    if (!window.google?.maps?.Geocoder) return;
+  const geocodeAddress = (addressString: string, autoSubmit: boolean = false) => {
+    if (!window.google?.maps?.Geocoder) {
+      // If Google Maps not available, try manual parsing
+      if (autoSubmit) {
+        const address = handleManualAddress(addressString);
+        if (address) {
+          onSearch(address);
+          setHasAutoSubmitted(true);
+        } else {
+          setAddressError('Could not find this address. Please select from suggestions or re-enter the address.');
+        }
+      }
+      return;
+    }
 
     if (!geocoderRef.current) {
       geocoderRef.current = new window.google.maps.Geocoder();
     }
 
+    setAddressError('');
+
     geocoderRef.current.geocode({ address: addressString }, (results: any[] | null, status: string) => {
       if (status === 'OK' && results && results.length > 0) {
         if (results.length === 1) {
-          // Single result - auto-select
+          // Single result - auto-select and submit
           const address = parseGooglePlace(results[0]);
           if (address) {
             const formatted = formatAddressString(address);
             setAddressInput(formatted);
+            setShowSuggestions(false);
+            setAddressError('');
             onSearch(address);
+            if (autoSubmit) {
+              setHasAutoSubmitted(true);
+            }
+          } else {
+            if (autoSubmit) {
+              setAddressError('Could not find this address. Please select from suggestions or re-enter the address.');
+            }
           }
         } else {
           // Multiple results - show dropdown
           setAddressSuggestions(results);
           setShowSuggestions(true);
+          if (autoSubmit) {
+            setAddressError('Multiple addresses found. Please select the correct one from the dropdown below.');
+          }
         }
       } else {
         // No results or error - try manual parsing
-        handleManualAddress(addressString);
+        const address = handleManualAddress(addressString);
+        if (address) {
+          onSearch(address);
+          if (autoSubmit) {
+            setHasAutoSubmitted(true);
+          }
+        } else {
+          if (autoSubmit) {
+            setAddressError('Could not find this address. Please select from suggestions or re-enter the address.');
+          }
+        }
       }
     });
   };
@@ -229,11 +265,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
   const selectSuggestion = (suggestion: any) => {
     if (suggestion.description) {
       setAddressInput(suggestion.description);
-      geocodeAddress(suggestion.description);
+      geocodeAddress(suggestion.description, false);
     } else if (suggestion.formatted_address) {
       setAddressInput(suggestion.formatted_address);
       const address = parseGooglePlace(suggestion);
       if (address) {
+        setAddressError('');
         onSearch(address);
       }
     }
@@ -290,20 +327,28 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     e.preventDefault();
 
     if (!addressInput.trim()) {
-      alert('Please enter an address');
+      setAddressError('Please enter an address');
       return;
     }
 
+    setAddressError('');
+    setHasAutoSubmitted(false);
+
     // If Google Maps is available, try to geocode the address
     if (window.google?.maps?.Geocoder) {
-      geocodeAddress(addressInput);
+      geocodeAddress(addressInput, false);
     } else {
       // Fallback to manual parsing if Google Maps not available
-      handleManualAddress(addressInput);
+      const address = handleManualAddress(addressInput);
+      if (address) {
+        onSearch(address);
+      } else {
+        setAddressError('Please enter a valid address (e.g., "123 Main St, Phoenix, AZ 85001" or "123 Main St Phoenix AZ 85001")');
+      }
     }
   };
 
-  const handleManualAddress = (addressString: string) => {
+  const handleManualAddress = (addressString: string): Address | null => {
     const trimmed = addressString.trim();
     
     // State abbreviations list
@@ -325,8 +370,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
         
         if (states.includes(state)) {
           const address = createAddress(street, city, state, zip);
-          onSearch(address);
-          return;
+          return address;
         }
       }
     }
@@ -348,13 +392,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
           const city = words[words.length - 1];
           const street = words.slice(0, -1).join(' ');
           const address = createAddress(street, city, state, zip);
-          onSearch(address);
-          return;
+          return address;
         }
       }
     }
 
-    alert('Please enter a valid address (e.g., "123 Main St, Phoenix, AZ 85001" or "123 Main St Phoenix AZ 85001")');
+    return null;
   };
 
   const createAddress = (street: string, city: string, state: string, zip: string): Address => {
@@ -494,6 +537,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
         <p className="mt-1 text-xs text-navy/60">
           Start typing to see address suggestions, or paste a full address
         </p>
+        {addressError && (
+          <div className="mt-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+            {addressError}
+          </div>
+        )}
       </div>
       
       <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-dark text-white">
