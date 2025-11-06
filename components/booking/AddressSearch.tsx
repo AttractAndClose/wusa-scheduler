@@ -10,7 +10,6 @@ import type { Address } from '@/types';
 declare global {
   interface Window {
     google: any;
-    initGoogleMaps: () => void;
   }
 }
 
@@ -22,44 +21,77 @@ interface AddressSearchProps {
 
 export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSearchProps) {
   const [addressInput, setAddressInput] = useState(initialAddress || '');
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const autocompleteInstanceRef = useRef<any>(null);
 
-  // Initialize Google Maps Places Autocomplete
+  // Load Google Maps script
   useEffect(() => {
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     
-    // Only load Google Maps if API key is available
     if (!apiKey) {
       console.warn('Google Maps API key not found. Address autocomplete will use manual parsing.');
       return;
     }
 
-    // Load Google Maps script if not already loaded
-    if (!window.google) {
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        initializeAutocomplete();
-      };
-      script.onerror = () => {
-        console.error('Failed to load Google Maps API');
-      };
-      document.head.appendChild(script);
-    } else {
+    // Check if already loaded
+    if (window.google && window.google.maps && window.google.maps.places) {
+      setIsGoogleMapsLoaded(true);
       initializeAutocomplete();
+      return;
     }
 
-    function initializeAutocomplete() {
-      if (!autocompleteRef.current || !window.google) return;
+    // Load Google Maps script
+    const existingScript = document.querySelector(`script[src*="maps.googleapis.com"]`);
+    if (existingScript) {
+      existingScript.addEventListener('load', () => {
+        setIsGoogleMapsLoaded(true);
+        initializeAutocomplete();
+      });
+      return;
+    }
 
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsAutocomplete`;
+    script.async = true;
+    script.defer = true;
+    
+    // Set up callback
+    (window as any).initGoogleMapsAutocomplete = () => {
+      setIsGoogleMapsLoaded(true);
+      initializeAutocomplete();
+    };
+
+    script.onerror = () => {
+      console.error('Failed to load Google Maps API');
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      if (autocompleteInstanceRef.current && window.google) {
+        window.google.maps.event.clearInstanceListeners(autocompleteInstanceRef.current);
+      }
+    };
+  }, []);
+
+  // Initialize autocomplete when Google Maps is ready
+  useEffect(() => {
+    if (isGoogleMapsLoaded && autocompleteRef.current && !autocompleteInstanceRef.current) {
+      initializeAutocomplete();
+    }
+  }, [isGoogleMapsLoaded]);
+
+  const initializeAutocomplete = () => {
+    if (!autocompleteRef.current || !window.google?.maps?.places) return;
+
+    try {
       const autocomplete = new window.google.maps.places.Autocomplete(
         autocompleteRef.current,
         {
           types: ['address'],
           componentRestrictions: { country: 'us' },
+          fields: ['address_components', 'geometry', 'formatted_address']
         }
       );
 
@@ -70,34 +102,22 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
         if (place.geometry && place.address_components) {
           const address = parseGooglePlace(place);
           if (address) {
-            setAddressInput(formatAddressString(address));
+            const formatted = formatAddressString(address);
+            setAddressInput(formatted);
             onSearch(address);
           }
         }
       });
+    } catch (error) {
+      console.error('Error initializing autocomplete:', error);
     }
+  };
 
-    return () => {
-      if (autocompleteInstanceRef.current) {
-        window.google?.maps?.event?.clearInstanceListeners?.(autocompleteInstanceRef.current);
-      }
-    };
-  }, [onSearch]);
-
-  // Update input when initialAddress changes and auto-search if valid
+  // Update input when initialAddress changes
   useEffect(() => {
     if (initialAddress && initialAddress !== addressInput) {
       setAddressInput(initialAddress);
-      // Auto-search if address looks complete (has state and zip)
-      const hasStateZip = /\b([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/i.test(initialAddress);
-      if (hasStateZip) {
-        // Small delay to ensure input is updated
-        setTimeout(() => {
-          handleManualAddress(initialAddress);
-        }, 100);
-      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialAddress]);
 
   const parseGooglePlace = (place: any): Address | null => {
@@ -155,7 +175,7 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
     }
 
     // If Google Maps is available, try to geocode the address
-    if (window.google && window.google.maps && window.google.maps.Geocoder) {
+    if (window.google?.maps?.Geocoder) {
       try {
         const geocoder = new window.google.maps.Geocoder();
         geocoder.geocode({ address: addressInput }, (results: any[] | null, status: string) => {
@@ -166,12 +186,11 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
               return;
             }
           }
-          // Fallback to manual parsing if geocoding fails or returns invalid data
+          // Fallback to manual parsing if geocoding fails
           handleManualAddress(addressInput);
         });
       } catch (error) {
         console.error('Error geocoding address:', error);
-        // Fallback to manual parsing on error
         handleManualAddress(addressInput);
       }
     } else {
@@ -186,7 +205,7 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
     // State abbreviations list
     const states = ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'];
     
-    // Try parsing with commas first (format: "Street, City, State ZIP")
+    // Try parsing with commas first
     const commaParts = trimmed.split(',').map(p => p.trim());
     
     if (commaParts.length >= 3) {
@@ -194,7 +213,6 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
       const city = commaParts[1];
       const stateZip = commaParts[2];
       
-      // Extract state and zip
       const stateZipMatch = stateZip.match(/^([A-Z]{2})\s+(\d{5}(?:-\d{4})?)$/i);
       
       if (stateZipMatch) {
@@ -209,8 +227,7 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
       }
     }
     
-    // Try parsing without commas (format: "Street City State ZIP")
-    // Look for state abbreviation followed by zip code
+    // Try parsing without commas
     const stateZipRegex = /\b([A-Z]{2})\s+(\d{5}(?:-\d{4})?)\b/i;
     const stateZipMatch = trimmed.match(stateZipRegex);
     
@@ -220,47 +237,8 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
       const stateZipIndex = stateZipMatch.index!;
       
       if (states.includes(state)) {
-        // Everything before state/zip is street + city
         const beforeStateZip = trimmed.substring(0, stateZipIndex).trim();
-        
-        // Try to split street and city (usually city is the last word before state)
-        // For addresses like "274 ganton drive raeford nc 28376"
-        // We'll take everything except the last word as street, last word as city
         const words = beforeStateZip.split(/\s+/);
-        
-        if (words.length >= 2) {
-          // Last word is likely the city, rest is street
-          const city = words[words.length - 1];
-          const street = words.slice(0, -1).join(' ');
-          
-          const address = createAddress(street, city, state, zip);
-          onSearch(address);
-          return;
-        } else if (words.length === 1) {
-          // Only one word before state - treat as street, use city from state
-          const street = words[0];
-          const city = 'Unknown'; // Fallback
-          
-          const address = createAddress(street, city, state, zip);
-          onSearch(address);
-          return;
-        }
-      }
-    }
-    
-    // If we still haven't parsed it, try to find just a zip code
-    const zipMatch = trimmed.match(/\b(\d{5}(?:-\d{4})?)\b/);
-    if (zipMatch) {
-      const zip = zipMatch[1];
-      const zipIndex = zipMatch.index!;
-      const beforeZip = trimmed.substring(0, zipIndex).trim();
-      
-      // Try to find state abbreviation before zip
-      const stateMatch = beforeZip.match(/\b([A-Z]{2})\s*$/i);
-      if (stateMatch && states.includes(stateMatch[1].toUpperCase())) {
-        const state = stateMatch[1].toUpperCase();
-        const beforeState = beforeZip.substring(0, stateMatch.index!).trim();
-        const words = beforeState.split(/\s+/);
         
         if (words.length >= 2) {
           const city = words[words.length - 1];
@@ -276,7 +254,6 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
   };
 
   const createAddress = (street: string, city: string, state: string, zip: string): Address => {
-    // Use approximate geocoding
     const stateCenters: Record<string, { lat: number; lng: number }> = {
       'GA': { lat: 33.7490, lng: -84.3880 },
       'TX': { lat: 32.7767, lng: -96.7970 },
@@ -322,6 +299,7 @@ export function AddressSearch({ onSearch, isLoading, initialAddress }: AddressSe
           disabled={isLoading}
           required
           className="border-gray-300 focus:border-primary focus:ring-primary text-base"
+          autoComplete="off"
         />
         <p className="mt-1 text-xs text-navy/60">
           Start typing to see address suggestions, or paste a full address

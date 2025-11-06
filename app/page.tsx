@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AddressSearch } from '@/components/booking/AddressSearch';
+import { AddressMap } from '@/components/booking/AddressMap';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { Button } from '@/components/ui/button';
@@ -163,21 +164,36 @@ function HomeContent() {
             />
           </div>
 
-          {/* Availability Grid */}
+          {/* Map and Availability Grid */}
           {customerAddress && (
-            <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  <p className="mt-4 text-navy">Calculating availability...</p>
+            <>
+              {/* Map Section */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+                <h2 className="text-xl font-semibold text-navy mb-4">
+                  Customer Location
+                </h2>
+                <div className="mb-2 text-sm text-navy/70">
+                  <p className="font-medium">{customerAddress.street}</p>
+                  <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
                 </div>
-              ) : (
-                <AvailabilityGrid
-                  availability={availability}
-                  onSlotSelect={handleSlotSelect}
-                />
-              )}
-            </div>
+                <AddressMap address={customerAddress} />
+              </div>
+
+              {/* Availability Grid */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+                {isLoading ? (
+                  <div className="text-center py-12">
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <p className="mt-4 text-navy">Calculating availability...</p>
+                  </div>
+                ) : (
+                  <AvailabilityGrid
+                    availability={availability}
+                    onSlotSelect={handleSlotSelect}
+                  />
+                )}
+              </div>
+            </>
           )}
 
           {/* Booking Modal */}
