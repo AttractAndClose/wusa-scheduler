@@ -14,11 +14,11 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Only render ClerkProvider if keys are available (prevents build errors)
-  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  // Get Clerk keys - use empty string fallback to prevent build errors
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '';
   
+  // If no key, render without ClerkProvider (for development)
   if (!publishableKey) {
-    console.warn('Clerk publishable key not found. Authentication will not work.');
     return (
       <html lang="en">
         <body>{children}</body>
