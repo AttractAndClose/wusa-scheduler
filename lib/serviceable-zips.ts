@@ -56,11 +56,13 @@ export async function getAllServiceableZips(): Promise<ServiceableZip[]> {
   const jsonZips = await loadServiceableZips();
   const storedZips = loadServiceableZipsFromStorage();
   
-  // If we have stored zips, use those (they override JSON)
+  // If we have stored zips with actual data, use those (they override JSON)
+  // But if stored zips is empty array, use JSON instead
   if (storedZips.length > 0) {
     return storedZips;
   }
   
+  // Return JSON zips (or empty array if JSON failed to load)
   return jsonZips;
 }
 
