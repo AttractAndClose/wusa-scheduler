@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Save, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getAllServiceableZips, saveServiceableZips } from '@/lib/serviceable-zips';
@@ -25,7 +25,6 @@ function ServiceableZipsContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('');
-  const [hasChanges, setHasChanges] = useState(false);
 
   // Redirect if not signed in
   useEffect(() => {
