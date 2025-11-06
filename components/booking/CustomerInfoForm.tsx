@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Search } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { Address } from '@/types';
+import { isZipServiceable } from '@/lib/serviceable-zips';
 
 // Declare Google Maps types
 declare global {
@@ -230,7 +231,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
         // No results or error - try manual parsing
         const address = handleManualAddress(addressString);
         if (address) {
-          onSearch(address);
+          handleAddressFound(address);
           if (autoSubmit) {
             setHasAutoSubmitted(true);
           }
@@ -271,7 +272,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
       const address = parseGooglePlace(suggestion);
       if (address) {
         setAddressError('');
-        onSearch(address);
+        handleAddressFound(address);
       }
     }
     setShowSuggestions(false);
@@ -319,8 +320,21 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     };
   };
 
-  const formatAddressString = (address: Address): string => {
-    return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
+  const handleAddressFound = async (address: Address) => {
+    // Check if zip code is serviceable
+    const zipCheck = await isZipServiceable(address.zip);
+    
+    if (!zipCheck.serviceable) {
+      if (zipCheck.excluded) {
+        setAddressError(`This zip code (${address.zip.substring(0, 5)}) is excluded from service. ${zipCheck.notes ? `Note: ${zipCheck.notes}` : ''}`);
+      } else {
+        setAddressError(`We do not currently service zip code ${address.zip.substring(0, 5)}. Please enter an address in a serviceable area.`);
+      }
+      return;
+    }
+    
+    // Zip is serviceable, proceed with search
+    onSearch(address);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -341,7 +355,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
       // Fallback to manual parsing if Google Maps not available
       const address = handleManualAddress(addressInput);
       if (address) {
-        onSearch(address);
+        handleAddressFound(address);
       } else {
         setAddressError('Please enter a valid address (e.g., "123 Main St, Phoenix, AZ 85001" or "123 Main St Phoenix AZ 85001")');
       }
