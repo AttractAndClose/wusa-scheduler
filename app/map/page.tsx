@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useUser } from '@clerk/nextjs';
-import dynamic from 'next/dynamic';
+import dynamicImport from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -17,7 +17,7 @@ import type { SalesRep, Appointment, Address } from '@/types';
 export const dynamic = 'force-dynamic';
 
 // Dynamically import Leaflet to avoid SSR issues
-const MapComponent = dynamic(() => import('@/components/map/ScheduleMap'), {
+const MapComponent = dynamicImport(() => import('@/components/map/ScheduleMap'), {
   ssr: false,
   loading: () => <div className="h-[600px] bg-gray-200 flex items-center justify-center">Loading map...</div>
 });
@@ -88,9 +88,9 @@ export default function MapPage() {
   }, [customerAddress, selectedDate, reps, availability, appointments]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-light">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-white border-b-2 border-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -99,7 +99,7 @@ export default function MapPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-navy">
                 Geographic Coverage Map
               </h1>
             </div>

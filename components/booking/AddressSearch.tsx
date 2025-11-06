@@ -66,7 +66,7 @@ export function AddressSearch({ onSearch, isLoading }: AddressSearchProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="street" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="street" className="block text-sm font-medium text-navy mb-1">
           Street Address
         </label>
         <Input
@@ -77,12 +77,13 @@ export function AddressSearch({ onSearch, isLoading }: AddressSearchProps) {
           onChange={(e) => setStreet(e.target.value)}
           disabled={isLoading}
           required
+          className="border-gray-300 focus:border-primary focus:ring-primary"
         />
       </div>
       
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="city" className="block text-sm font-medium text-navy mb-1">
             City
           </label>
           <Input
@@ -93,11 +94,12 @@ export function AddressSearch({ onSearch, isLoading }: AddressSearchProps) {
             onChange={(e) => setCity(e.target.value)}
             disabled={isLoading}
             required
+            className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
         
         <div>
-          <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="state" className="block text-sm font-medium text-navy mb-1">
             State
           </label>
           <Input
@@ -109,11 +111,12 @@ export function AddressSearch({ onSearch, isLoading }: AddressSearchProps) {
             disabled={isLoading}
             maxLength={2}
             required
+            className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
         
         <div>
-          <label htmlFor="zip" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="zip" className="block text-sm font-medium text-navy mb-1">
             ZIP Code
           </label>
           <Input
@@ -125,11 +128,12 @@ export function AddressSearch({ onSearch, isLoading }: AddressSearchProps) {
             disabled={isLoading}
             maxLength={5}
             required
+            className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
       </div>
       
-      <Button type="submit" disabled={isLoading} className="w-full">
+      <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-dark text-white">
         <Search className="mr-2 h-4 w-4" />
         {isLoading ? 'Searching...' : 'Find Available Times'}
       </Button>

@@ -94,18 +94,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-white border-b-2 border-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Sales Appointment Scheduler
+            <h1 className="text-2xl font-bold text-navy">
+              Windows USA Appointment Scheduler
             </h1>
             <nav className="flex items-center gap-4">
               <Link href="/availability">
-                <Button variant="outline">Manage Availability</Button>
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Manage Availability
+                </Button>
               </Link>
               <Link href="/map">
-                <Button variant="outline">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
                   <MapPin className="mr-2 h-4 w-4" />
                   View Map
                 </Button>
@@ -120,8 +122,8 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Address Search Section */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+          <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+            <h2 className="text-xl font-semibold text-navy mb-4">
               Enter Customer Address
             </h2>
             <AddressSearch onSearch={handleAddressSearch} isLoading={isLoading} />
@@ -129,11 +131,11 @@ export default function Home() {
 
           {/* Availability Grid */}
           {customerAddress && (
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
               {isLoading ? (
                 <div className="text-center py-12">
-                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  <p className="mt-4 text-gray-600">Calculating availability...</p>
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-4 text-navy">Calculating availability...</p>
                 </div>
               ) : (
                 <AvailabilityGrid

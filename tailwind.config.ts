@@ -9,8 +9,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        // Windows USA Brand Colors
+        primary: {
+          DEFAULT: '#E11B37', // Windows USA Red
+          dark: '#C0152F',
+          light: '#F02D4A',
+        },
+        navy: {
+          DEFAULT: '#001F5B', // Windows USA Dark Blue
+          dark: '#001540',
+          light: '#003080',
+        },
+        gray: {
+          light: '#EEEEEE', // Windows USA Background
+          DEFAULT: '#CCCCCC',
+          dark: '#999999',
+        },
+        background: "#EEEEEE",
+        foreground: "#001F5B",
+      },
+      fontFamily: {
+        sans: ['Helvetica', 'Arial', 'sans-serif'],
       },
     },
   },

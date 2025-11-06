@@ -16,21 +16,21 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
   
   const getStatusIcon = () => {
     if (slot.status === 'good') {
-      return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      return <CheckCircle2 className="h-5 w-5 text-primary" />;
     } else if (slot.status === 'limited') {
-      return <AlertCircle className="h-5 w-5 text-yellow-500" />;
+      return <AlertCircle className="h-5 w-5 text-yellow-600" />;
     } else {
-      return <XCircle className="h-5 w-5 text-red-500" />;
+      return <XCircle className="h-5 w-5 text-gray-dark" />;
     }
   };
 
   const getStatusColor = () => {
     if (slot.status === 'good') {
-      return 'border-green-200 bg-green-50 hover:bg-green-100';
+      return 'border-primary/30 bg-primary/10 hover:bg-primary/20 border-2';
     } else if (slot.status === 'limited') {
-      return 'border-yellow-200 bg-yellow-50 hover:bg-yellow-100';
+      return 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100 border-2';
     } else {
-      return 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed';
+      return 'border-gray-300 bg-gray-light opacity-50 cursor-not-allowed';
     }
   };
 
@@ -55,12 +55,12 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Clock className="h-5 w-5 text-gray-500" />
+          <Clock className="h-5 w-5 text-navy/60" />
           <div>
-            <div className="font-semibold text-gray-900">
+            <div className="font-semibold text-navy">
               {format(date, 'EEE, MMM d')}
             </div>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-navy/70">
               {slot.timeSlot === '10am' ? '10:00 AM' : 
                slot.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM'}
             </div>
@@ -69,7 +69,7 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
         
         <div className="flex items-center gap-2">
           {getStatusIcon()}
-          <div className="text-sm font-medium text-gray-700">
+          <div className="text-sm font-medium text-navy">
             {getStatusText()}
           </div>
         </div>

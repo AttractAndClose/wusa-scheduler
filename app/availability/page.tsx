@@ -60,19 +60,19 @@ export default function AvailabilityPage() {
 
   if (!isLoaded || !isSignedIn || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-light flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-navy">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-light">
       {/* Header */}
-      <header className="bg-white border-b">
+      <header className="bg-white border-b-2 border-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -81,7 +81,7 @@ export default function AvailabilityPage() {
                   <ArrowLeft className="h-5 w-5" />
                 </Button>
               </Link>
-              <h1 className="text-2xl font-bold text-gray-900">
+              <h1 className="text-2xl font-bold text-navy">
                 Sales Rep Availability Management
               </h1>
             </div>
@@ -100,17 +100,17 @@ export default function AvailabilityPage() {
               .sort((a, b) => a.date.localeCompare(b.date));
 
             return (
-              <Card key={rep.id} className="p-6">
+              <Card key={rep.id} className="p-6 border border-gray-300 shadow-md">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
                       <div
                         className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: rep.color }}
                       ></div>
                       {rep.name}
                     </h2>
-                    <div className="mt-2 space-y-1 text-sm text-gray-600">
+                    <div className="mt-2 space-y-1 text-sm text-navy/70">
                       <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4" />
                         {rep.email}
@@ -128,13 +128,13 @@ export default function AvailabilityPage() {
                 </div>
 
                 <div className="mt-4">
-                  <h3 className="text-sm font-medium text-gray-700 mb-3">
+                  <h3 className="text-sm font-medium text-navy mb-3">
                     Weekly Availability
                   </h3>
                   <div className="grid grid-cols-7 gap-2">
                     {DAYS.map((day) => (
                       <div key={day} className="space-y-1">
-                        <div className="text-xs font-medium text-gray-600 capitalize">
+                        <div className="text-xs font-medium text-navy capitalize">
                           {day.substring(0, 3)}
                         </div>
                         <div className="space-y-1">
@@ -145,8 +145,8 @@ export default function AvailabilityPage() {
                                 key={slot}
                                 className={`text-xs p-1 rounded ${
                                   isAvailable
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-gray-100 text-gray-400'
+                                    ? 'bg-primary/20 text-primary font-medium border border-primary/30'
+                                    : 'bg-gray-light text-gray-dark'
                                 }`}
                               >
                                 {slot}
@@ -160,33 +160,33 @@ export default function AvailabilityPage() {
                 </div>
 
                 {upcomingAppointments.length > 0 && (
-                  <div className="mt-6 pt-6 border-t">
-                    <h3 className="text-sm font-medium text-gray-700 mb-3">
+                  <div className="mt-6 pt-6 border-t border-gray-300">
+                    <h3 className="text-sm font-medium text-navy mb-3">
                       Upcoming Appointments
                     </h3>
                     <div className="space-y-2">
                       {upcomingAppointments.slice(0, 5).map((apt) => (
                         <div
                           key={apt.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm"
+                          className="flex items-center justify-between p-2 bg-gray-light rounded text-sm"
                         >
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-navy">
                               {apt.customerName}
                             </div>
-                            <div className="text-gray-600">
+                            <div className="text-navy/70">
                               {format(parseISO(apt.date), 'MMM d, yyyy')} at{' '}
                               {apt.timeSlot === '10am' ? '10:00 AM' :
                                apt.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM'}
                             </div>
-                            <div className="text-gray-500 text-xs">
+                            <div className="text-navy/50 text-xs">
                               {apt.address.city}, {apt.address.state}
                             </div>
                           </div>
                         </div>
                       ))}
                       {upcomingAppointments.length > 5 && (
-                        <div className="text-xs text-gray-500 text-center pt-2">
+                        <div className="text-xs text-navy/50 text-center pt-2">
                           +{upcomingAppointments.length - 5} more
                         </div>
                       )}

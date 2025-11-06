@@ -19,7 +19,7 @@ export function AvailabilityGrid({ availability, onSlotSelect }: AvailabilityGri
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900">Available Appointments</h2>
+      <h2 className="text-2xl font-bold text-navy">Available Appointments</h2>
       
       <div className="grid gap-4">
         {availability.map((daySlots, dayIndex) => (
@@ -35,9 +35,9 @@ export function AvailabilityGrid({ availability, onSlotSelect }: AvailabilityGri
         ))}
       </div>
       
-      <div className="flex items-center gap-4 text-sm text-gray-600 pt-4 border-t">
+      <div className="flex items-center gap-4 text-sm text-navy/70 pt-4 border-t border-gray-300">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-green-500"></div>
+          <div className="w-4 h-4 rounded-full bg-primary"></div>
           <span>Good (3+ reps)</span>
         </div>
         <div className="flex items-center gap-2">
@@ -45,7 +45,7 @@ export function AvailabilityGrid({ availability, onSlotSelect }: AvailabilityGri
           <span>Limited (1-2 reps)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 rounded-full bg-red-500"></div>
+          <div className="w-4 h-4 rounded-full bg-gray-dark"></div>
           <span>None</span>
         </div>
       </div>
