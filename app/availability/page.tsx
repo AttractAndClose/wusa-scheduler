@@ -13,7 +13,7 @@ import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import { calculateAvailabilityGrid } from '@/lib/availability';
-import { format, parseISO, startOfWeek, addWeeks, addDays } from 'date-fns';
+import { format, parseISO, startOfWeek, addWeeks, addDays, startOfDay, isBefore } from 'date-fns';
 import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep } from '@/types';
 
 // Force dynamic rendering
@@ -364,8 +364,10 @@ function AvailabilityContent() {
                           {week.dates.map((date, dayIndex) => {
                             const dayName = DAYS[dayIndex];
                             const dateString = format(date, 'yyyy-MM-dd');
-                            const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-                            const isPast = date < new Date() && !isToday;
+                            const today = startOfDay(new Date());
+                            const dateDay = startOfDay(date);
+                            const isToday = format(dateDay, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+                            const isPast = isBefore(dateDay, today);
                             const dayAppointments = repAppointments.filter(
                               apt => apt.date === dateString && apt.status === 'scheduled'
                             );
