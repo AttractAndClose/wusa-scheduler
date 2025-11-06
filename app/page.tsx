@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AddressSearch } from '@/components/booking/AddressSearch';
+import { CustomerInfoForm } from '@/components/booking/CustomerInfoForm';
 import dynamic from 'next/dynamic';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
@@ -34,6 +34,14 @@ function HomeContent() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [initialAddress, setInitialAddress] = useState<string>('');
   const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = current week, 1 = next week, -1 = previous week
+  const [initialCustomerData, setInitialCustomerData] = useState<{
+    leadId?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+  }>({});
 
   // Load data on mount
   useEffect(() => {
@@ -50,25 +58,52 @@ function HomeContent() {
     loadData();
   }, []);
 
-  // Check for address in URL parameters (for Salesforce integration)
+  // Check for customer info in URL parameters (for Salesforce integration)
   useEffect(() => {
     if (searchParams) {
+      const customerData: {
+        leadId?: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        address?: string;
+      } = {};
+
+      // Get all customer info fields
+      const leadId = searchParams.get('leadId');
+      const firstName = searchParams.get('firstName');
+      const lastName = searchParams.get('lastName');
+      const email = searchParams.get('email');
+      const phone = searchParams.get('phone');
+      
       // Check for full address string
       const addressParam = searchParams.get('address');
       if (addressParam) {
-        setInitialAddress(decodeURIComponent(addressParam));
-        return;
+        customerData.address = decodeURIComponent(addressParam);
+      } else {
+        // Check for individual address components
+        const street = searchParams.get('street');
+        const city = searchParams.get('city');
+        const state = searchParams.get('state');
+        const zip = searchParams.get('zip');
+
+        if (street && city && state && zip) {
+          customerData.address = `${decodeURIComponent(street)}, ${decodeURIComponent(city)}, ${state.toUpperCase()} ${zip}`;
+        }
       }
 
-      // Check for individual address components
-      const street = searchParams.get('street');
-      const city = searchParams.get('city');
-      const state = searchParams.get('state');
-      const zip = searchParams.get('zip');
+      if (leadId) customerData.leadId = decodeURIComponent(leadId);
+      if (firstName) customerData.firstName = decodeURIComponent(firstName);
+      if (lastName) customerData.lastName = decodeURIComponent(lastName);
+      if (email) customerData.email = decodeURIComponent(email);
+      if (phone) customerData.phone = decodeURIComponent(phone);
 
-      if (street && city && state && zip) {
-        const fullAddress = `${decodeURIComponent(street)}, ${decodeURIComponent(city)}, ${state.toUpperCase()} ${zip}`;
-        setInitialAddress(fullAddress);
+      if (Object.keys(customerData).length > 0) {
+        setInitialCustomerData(customerData);
+        if (customerData.address) {
+          setInitialAddress(customerData.address);
+        }
       }
     }
   }, [searchParams]);
@@ -200,15 +235,15 @@ function HomeContent() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Address Search Section */}
+          {/* Customer Info Section */}
           <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
             <h2 className="text-xl font-semibold text-navy mb-4">
-              Enter Customer Address
+              Customer Info
             </h2>
-            <AddressSearch 
+            <CustomerInfoForm 
               onSearch={handleAddressSearch} 
               isLoading={isLoading}
-              initialAddress={initialAddress}
+              initialData={initialCustomerData}
             />
           </div>
 
