@@ -185,7 +185,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
       if (autoSubmit) {
         const address = handleManualAddress(addressString);
         if (address) {
-          onSearch(address);
+          handleAddressFound(address);
           setHasAutoSubmitted(true);
         } else {
           setAddressError('Could not find this address. Please select from suggestions or re-enter the address.');
