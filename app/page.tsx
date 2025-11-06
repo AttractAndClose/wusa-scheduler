@@ -6,6 +6,7 @@ import { CustomerInfoForm } from '@/components/booking/CustomerInfoForm';
 import dynamic from 'next/dynamic';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
+import { CensusStats } from '@/components/booking/CensusStats';
 import { Button } from '@/components/ui/button';
 import { MapPin } from 'lucide-react';
 import { UserButton } from '@clerk/nextjs';
@@ -278,6 +279,9 @@ function HomeContent() {
                 </div>
                 <AddressMap address={customerAddress} />
               </div>
+
+              {/* Census Stats Section */}
+              <CensusStats address={customerAddress} />
             </>
           )}
 
