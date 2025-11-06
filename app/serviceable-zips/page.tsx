@@ -199,6 +199,9 @@ function ServiceableZipsContent() {
           </div>
           <div className="mt-4 text-sm text-navy/70">
             Showing {filteredZips.length} of {zips.length} zip codes
+            {zips.length === 0 && (
+              <span className="text-red-600 ml-2">⚠️ No zip codes loaded. Check browser console for errors.</span>
+            )}
           </div>
         </Card>
 
