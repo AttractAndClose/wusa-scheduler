@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Calendar, Phone, Mail, MapPin } from 'lucide-react';
+import { Calendar, Phone, Mail, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { UserButton } from '@clerk/nextjs';
@@ -32,6 +32,7 @@ function AvailabilityContent() {
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [addressAvailability, setAddressAvailability] = useState<any[][]>([]);
   const [selectedRepId, setSelectedRepId] = useState<string>('all');
+  const [expandedReps, setExpandedReps] = useState<Set<string>>(new Set());
 
   // Redirect if not signed in
   useEffect(() => {
@@ -364,6 +365,7 @@ function AvailabilityContent() {
                             const dayName = DAYS[dayIndex];
                             const dateString = format(date, 'yyyy-MM-dd');
                             const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                            const isPast = date < new Date() && !isToday;
                             const dayAppointments = repAppointments.filter(
                               apt => apt.date === dateString && apt.status === 'scheduled'
                             );
@@ -371,10 +373,20 @@ function AvailabilityContent() {
                             return (
                               <div key={dayIndex} className="space-y-1">
                                 <div className={`text-xs font-medium text-center py-1 rounded ${
-                                  isToday ? 'bg-navy text-white' : 'text-navy'
+                                  isToday 
+                                    ? 'bg-red-500 text-white' 
+                                    : isPast 
+                                    ? 'bg-gray-300 text-gray-500' 
+                                    : 'text-navy'
                                 }`}>
                                   <div>{format(date, 'EEE').toUpperCase()}</div>
-                                  <div className={`text-sm font-bold ${isToday ? 'text-white' : 'text-navy'}`}>
+                                  <div className={`text-sm font-bold ${
+                                    isToday 
+                                      ? 'text-white' 
+                                      : isPast 
+                                      ? 'text-gray-500' 
+                                      : 'text-navy'
+                                  }`}>
                                     {format(date, 'd')}
                                   </div>
                                 </div>
@@ -387,7 +399,9 @@ function AvailabilityContent() {
                                       <div
                                         key={slot}
                                         className={`text-xs p-2 rounded text-center ${
-                                          hasAppointment
+                                          isPast
+                                            ? 'bg-gray-200 text-gray-400 opacity-50'
+                                            : hasAppointment
                                             ? 'bg-orange-100 text-orange-800 font-medium border border-orange-300'
                                             : isAvailable
                                             ? 'bg-green-100 text-green-800 font-medium border border-green-300'
@@ -414,7 +428,7 @@ function AvailabilityContent() {
                         Upcoming Appointments
                       </h3>
                       <div className="space-y-2">
-                        {upcomingAppointments.slice(0, 5).map((apt) => (
+                        {upcomingAppointments.slice(0, expandedReps.has(rep.id) ? upcomingAppointments.length : 5).map((apt) => (
                           <div
                             key={apt.id}
                             className="flex items-center justify-between p-2 bg-gray-light rounded text-sm"
@@ -435,9 +449,30 @@ function AvailabilityContent() {
                           </div>
                         ))}
                         {upcomingAppointments.length > 5 && (
-                          <div className="text-xs text-navy/50 text-center pt-2">
-                            +{upcomingAppointments.length - 5} more
-                          </div>
+                          <button
+                            onClick={() => {
+                              const newExpanded = new Set(expandedReps);
+                              if (newExpanded.has(rep.id)) {
+                                newExpanded.delete(rep.id);
+                              } else {
+                                newExpanded.add(rep.id);
+                              }
+                              setExpandedReps(newExpanded);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 text-xs text-navy/70 hover:text-navy pt-2 transition-colors"
+                          >
+                            {expandedReps.has(rep.id) ? (
+                              <>
+                                <ChevronUp className="h-4 w-4" />
+                                Show Less
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="h-4 w-4" />
+                                Show {upcomingAppointments.length - 5} More
+                              </>
+                            )}
+                          </button>
                         )}
                       </div>
                     </div>
