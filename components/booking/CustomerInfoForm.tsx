@@ -210,7 +210,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
             setAddressInput(formatted);
             setShowSuggestions(false);
             setAddressError('');
-            onSearch(address);
+            handleAddressFound(address);
             if (autoSubmit) {
               setHasAutoSubmitted(true);
             }
