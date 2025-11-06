@@ -227,22 +227,27 @@ function AvailabilityContent() {
               </Link>
             </div>
             <nav className="flex items-center gap-4">
-              <Link href="/availability">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Manage Availability
-                </Button>
-              </Link>
-              <Link href="/serviceable-zips">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Serviceable Zip Codes
-                </Button>
-              </Link>
-              <Link href="/map">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  View Map
-                </Button>
-              </Link>
+            <Link href="/availability">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                Manage Availability
+              </Button>
+            </Link>
+            <Link href="/appointments">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                Scheduled Appointments
+              </Button>
+            </Link>
+            <Link href="/serviceable-zips">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                Serviceable Zip Codes
+              </Button>
+            </Link>
+            <Link href="/map">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                <MapPin className="mr-2 h-4 w-4" />
+                View Map
+              </Button>
+            </Link>
               <UserButton afterSignOutUrl="/" />
             </nav>
           </div>
@@ -382,7 +387,9 @@ function AvailabilityContent() {
                                       <div
                                         key={slot}
                                         className={`text-xs p-2 rounded text-center ${
-                                          isAvailable && !hasAppointment
+                                          hasAppointment
+                                            ? 'bg-orange-100 text-orange-800 font-medium border border-orange-300'
+                                            : isAvailable
                                             ? 'bg-green-100 text-green-800 font-medium border border-green-300'
                                             : 'bg-gray-100 text-gray-500'
                                         }`}

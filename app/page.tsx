@@ -221,17 +221,22 @@ function HomeContent() {
                   Manage Availability
                 </Button>
               </Link>
-              <Link href="/serviceable-zips">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Serviceable Zip Codes
-                </Button>
-              </Link>
-              <Link href="/map">
-                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  <MapPin className="mr-2 h-4 w-4" />
-                  View Map
-                </Button>
-              </Link>
+            <Link href="/appointments">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                Scheduled Appointments
+              </Button>
+            </Link>
+            <Link href="/serviceable-zips">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                Serviceable Zip Codes
+              </Button>
+            </Link>
+            <Link href="/map">
+              <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                <MapPin className="mr-2 h-4 w-4" />
+                View Map
+              </Button>
+            </Link>
               <UserButton afterSignOutUrl="/" />
             </nav>
           </div>
