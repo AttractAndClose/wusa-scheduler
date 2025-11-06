@@ -8,9 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { UserButton } from '@clerk/nextjs';
 import { getAllServiceableZips, saveServiceableZips } from '@/lib/serviceable-zips';
 import type { ServiceableZip } from '@/types/serviceable-zips';
 
@@ -145,13 +146,30 @@ function ServiceableZipsContent() {
                 />
               </Link>
             </div>
-            <div className="flex items-center gap-4">
-              <Link href="/">
+            <nav className="flex items-center gap-4">
+              <Link href="/availability">
                 <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Back to Booking
+                  Manage Availability
                 </Button>
               </Link>
-            </div>
+              <Link href="/appointments">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Scheduled Appointments
+                </Button>
+              </Link>
+              <Link href="/serviceable-zips">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Serviceable Zip Codes
+                </Button>
+              </Link>
+              <Link href="/map">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  View Map
+                </Button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </nav>
           </div>
         </div>
       </header>
