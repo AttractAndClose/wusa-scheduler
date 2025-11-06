@@ -26,28 +26,24 @@ CLERK_SECRET_KEY=sk_test_...
    - `CLERK_SECRET_KEY` = your secret key
 4. Redeploy your application
 
-## 3. Create Admin User
+## 3. Configure Clerk Settings
 
-### Option 1: Via Clerk Dashboard (Recommended)
+In Clerk Dashboard → Settings:
+- **Email/Password** authentication should be enabled
+- **Sign-up** should be **DISABLED** (users must be created manually by admin)
+- Configure email verification as needed
+
+## 4. Create Admin User
+
+**Users must be created manually via Clerk Dashboard:**
+
 1. Go to https://dashboard.clerk.com → Your App → Users
 2. Click **Create User**
 3. Email: `danny@attractandclose.com`
 4. Password: `123456`
 5. Click **Create**
 
-### Option 2: Via Sign-Up Page
-1. Visit your deployed app: `https://your-app.vercel.app/sign-up`
-2. Sign up with:
-   - Email: `danny@attractandclose.com`
-   - Password: `123456`
-3. Verify email if required
-
-## 4. Configure Clerk Settings
-
-In Clerk Dashboard → Settings:
-- **Email/Password** authentication should be enabled
-- **Sign-up** should be enabled (or disabled if you only want admin access)
-- Configure email verification as needed
+**Note:** Sign-up is disabled. All users must be created by admins through the Clerk dashboard.
 
 ## 5. Test Authentication
 
@@ -62,8 +58,7 @@ In Clerk Dashboard → Settings:
 - `/` - Public (booking interface)
 - `/availability` - Protected (requires authentication)
 - `/map` - Protected (requires authentication)
-- `/sign-in` - Public (sign in page)
-- `/sign-up` - Public (sign up page)
+- `/sign-in` - Public (sign in page only, no sign-up)
 
 ## Admin Email
 
