@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AddressSearch } from '@/components/booking/AddressSearch';
-import { AddressMap } from '@/components/booking/AddressMap';
+import dynamic from 'next/dynamic';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { Button } from '@/components/ui/button';
@@ -13,9 +13,15 @@ import Link from 'next/link';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import type { Address, SlotAvailability } from '@/types';
+import { startOfWeek, addWeeks, addDays } from 'date-fns';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
+// Dynamically import AddressMap to avoid SSR issues with Leaflet
+const AddressMap = dynamic(() => import('@/components/booking/AddressMap').then(mod => ({ default: mod.AddressMap })), {
+  ssr: false,
+  loading: () => <div className="h-[400px] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
+    <div className="text-navy">Loading map...</div>
+  </div>
+});
 
 function HomeContent() {
   const searchParams = useSearchParams();
@@ -27,6 +33,7 @@ function HomeContent() {
   const [availabilityData, setAvailabilityData] = useState<any>({});
   const [appointments, setAppointments] = useState<any[]>([]);
   const [initialAddress, setInitialAddress] = useState<string>('');
+  const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = current week, 1 = next week, -1 = previous week
 
   // Load data on mount
   useEffect(() => {
@@ -66,8 +73,42 @@ function HomeContent() {
     }
   }, [searchParams]);
 
+  // Calculate the start date for the current week view
+  const getWeekStartDate = () => {
+    const today = new Date();
+    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+    return addWeeks(currentWeekStart, weekOffset);
+  };
+
+  // Recalculate availability when week changes
+  const recalculateAvailability = async (startDate: Date) => {
+    if (!customerAddress) return;
+
+    setIsLoading(true);
+    try {
+      const latestAppointments = await getAllAppointments();
+      setAppointments(latestAppointments);
+
+      const grid = calculateAvailabilityGrid(
+        customerAddress,
+        startDate,
+        reps,
+        availabilityData,
+        latestAppointments,
+        5
+      );
+      setAvailability(grid);
+    } catch (error) {
+      console.error('Error calculating availability:', error);
+      alert('Failed to calculate availability. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleAddressSearch = async (address: Address) => {
     setCustomerAddress(address);
+    setWeekOffset(0); // Reset to current week when new address is searched
     setIsLoading(true);
 
     try {
@@ -75,7 +116,7 @@ function HomeContent() {
       const latestAppointments = await getAllAppointments();
       setAppointments(latestAppointments);
 
-      const startDate = new Date();
+      const startDate = getWeekStartDate();
       const grid = calculateAvailabilityGrid(
         address,
         startDate,
@@ -93,6 +134,13 @@ function HomeContent() {
     }
   };
 
+  const handleWeekChange = (direction: 'prev' | 'next') => {
+    const newOffset = direction === 'next' ? weekOffset + 1 : weekOffset - 1;
+    setWeekOffset(newOffset);
+    const newStartDate = getWeekStartDate();
+    recalculateAvailability(newStartDate);
+  };
+
   const handleSlotSelect = (slot: SlotAvailability) => {
     if (slot.status !== 'none' && customerAddress) {
       setSelectedSlot(slot);
@@ -105,7 +153,7 @@ function HomeContent() {
     setAppointments(latestAppointments);
 
     if (customerAddress) {
-      const startDate = new Date();
+      const startDate = getWeekStartDate();
       const grid = calculateAvailabilityGrid(
         customerAddress,
         startDate,
@@ -164,21 +212,9 @@ function HomeContent() {
             />
           </div>
 
-          {/* Map and Availability Grid */}
+          {/* Availability Grid and Map */}
           {customerAddress && (
             <>
-              {/* Map Section */}
-              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-                <h2 className="text-xl font-semibold text-navy mb-4">
-                  Customer Location
-                </h2>
-                <div className="mb-2 text-sm text-navy/70">
-                  <p className="font-medium">{customerAddress.street}</p>
-                  <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
-                </div>
-                <AddressMap address={customerAddress} />
-              </div>
-
               {/* Availability Grid */}
               <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
                 {isLoading ? (
@@ -190,8 +226,22 @@ function HomeContent() {
                   <AvailabilityGrid
                     availability={availability}
                     onSlotSelect={handleSlotSelect}
+                    onWeekChange={handleWeekChange}
+                    weekOffset={weekOffset}
                   />
                 )}
+              </div>
+
+              {/* Map Section */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+                <h2 className="text-xl font-semibold text-navy mb-4">
+                  Customer Location
+                </h2>
+                <div className="mb-2 text-sm text-navy/70">
+                  <p className="font-medium">{customerAddress.street}</p>
+                  <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
+                </div>
+                <AddressMap address={customerAddress} />
               </div>
             </>
           )}
