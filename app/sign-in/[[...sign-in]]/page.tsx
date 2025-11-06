@@ -1,12 +1,22 @@
 import { SignIn } from '@clerk/nextjs';
+import Image from 'next/image';
 
 export default function SignInPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-light">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-3xl font-bold text-navy mb-2">Windows USA</h1>
-          <p className="text-navy/70">Sales Appointment Scheduler</p>
+          <div className="flex justify-center mb-4">
+            <Image
+              src="/windowsusa-logo.png"
+              alt="Windows USA"
+              width={200}
+              height={60}
+              className="h-auto w-auto"
+              priority
+            />
+          </div>
+          <p className="text-navy/70 text-sm">Sales Appointment Scheduler</p>
         </div>
         <SignIn 
           routing="path"

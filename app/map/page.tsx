@@ -6,7 +6,6 @@ import dynamicImport from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { loadReps, getAllAppointments, loadAvailability } from '@/lib/data-loader';
 import { format, addDays, parseISO } from 'date-fns';
@@ -94,14 +93,13 @@ export default function MapPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
+              <Link href="/" className="flex items-center">
+                <img 
+                  src="/windowsusa-logo.png" 
+                  alt="Windows USA" 
+                  className="h-10 w-auto"
+                />
               </Link>
-              <h1 className="text-2xl font-bold text-navy">
-                Geographic Coverage Map
-              </h1>
             </div>
           </div>
         </div>

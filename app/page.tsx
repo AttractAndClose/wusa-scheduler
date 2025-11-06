@@ -92,14 +92,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-light">
       {/* Header */}
       <header className="bg-white border-b-2 border-primary shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-navy">
-              Windows USA Appointment Scheduler
-            </h1>
+            <Link href="/" className="flex items-center">
+              <img 
+                src="/windowsusa-logo.png" 
+                alt="Windows USA" 
+                className="h-10 w-auto"
+              />
+            </Link>
             <nav className="flex items-center gap-4">
               <Link href="/availability">
                 <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">

@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Phone, Mail } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import { format, parseISO } from 'date-fns';
 import type { SalesRep, Appointment, Availability, TimeSlot } from '@/types';
@@ -76,14 +77,13 @@ export default function AvailabilityPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
+              <Link href="/" className="flex items-center">
+                <img 
+                  src="/windowsusa-logo.png" 
+                  alt="Windows USA" 
+                  className="h-10 w-auto"
+                />
               </Link>
-              <h1 className="text-2xl font-bold text-navy">
-                Sales Rep Availability Management
-              </h1>
             </div>
           </div>
         </div>
