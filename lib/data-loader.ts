@@ -9,6 +9,11 @@ let cachedReps: SalesRep[] | null = null;
 let cachedAvailability: Availability | null = null;
 let cachedAppointments: Appointment[] | null = null;
 
+// Function to clear appointments cache (useful for development)
+export function clearAppointmentsCache(): void {
+  cachedAppointments = null;
+}
+
 export async function loadReps(): Promise<SalesRep[]> {
   if (cachedReps) {
     return cachedReps;
@@ -42,14 +47,20 @@ export async function loadAvailability(): Promise<Availability> {
 }
 
 export async function loadAppointments(): Promise<Appointment[]> {
-  if (cachedAppointments) {
-    return cachedAppointments;
-  }
-  
+  // Always fetch fresh data (disable cache for now to ensure we get latest)
   try {
-    const response = await fetch('/data/appointments.json');
+    const response = await fetch('/data/appointments.json', { 
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache'
+      }
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to load appointments: ${response.status}`);
+    }
     const data = await response.json();
     cachedAppointments = data;
+    console.log(`Loaded ${data.length} appointments from JSON file`);
     return data;
   } catch (error) {
     console.error('Error loading appointments:', error);
