@@ -1,13 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Ensure CSS is properly handled
-  webpack: (config, { isServer }) => {
-    // Ensure CSS files are properly processed
-    if (!isServer) {
-      config.optimization = {
-        ...config.optimization,
-        minimize: false, // Disable minification in dev to help debug CSS issues
+  // Fix CSS hot reload issues in development
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      // Improve HMR for CSS files
+      config.watchOptions = {
+        ...config.watchOptions,
+        ignored: /node_modules/,
+        poll: 1000, // Check for changes every second (helps with CSS HMR)
       };
     }
     return config;
