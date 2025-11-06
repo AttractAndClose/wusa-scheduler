@@ -315,7 +315,7 @@ function AvailabilityContent() {
               });
 
               return (
-                <Card key={rep.id} className="p-6 border border-gray-300 shadow-md">
+                <Card key={rep.id} className="p-6 border border-gray-300 shadow-md bg-white">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
