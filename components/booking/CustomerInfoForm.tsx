@@ -116,21 +116,32 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     }
   }, [isGoogleMapsLoaded]);
 
-  // Auto-geocode address when initialData changes
+  // Update form fields when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      if (initialData.leadId !== undefined) setLeadId(initialData.leadId);
+      if (initialData.firstName !== undefined) setFirstName(initialData.firstName);
+      if (initialData.lastName !== undefined) setLastName(initialData.lastName);
+      if (initialData.email !== undefined) setEmail(initialData.email);
+      if (initialData.phone !== undefined) setPhone(initialData.phone);
+      if (initialData.address !== undefined && initialData.address !== addressInput) {
+        setAddressInput(initialData.address);
+      }
+    }
+  }, [initialData]);
+
+  // Auto-geocode address when address from initialData changes
   useEffect(() => {
     if (initialData?.address && initialData.address !== addressInput) {
-      setAddressInput(initialData.address);
       // Wait a bit for Google Maps to load if needed
       const timer = setTimeout(() => {
-        if (isGoogleMapsLoaded && window.google?.maps?.Geocoder) {
-          geocodeAddress(initialData.address!);
-        } else if (window.google?.maps?.Geocoder) {
+        if (window.google?.maps?.Geocoder) {
           geocodeAddress(initialData.address!);
         }
-      }, 500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [initialData?.address]);
+  }, [initialData?.address, addressInput]);
 
   const initializeAutocomplete = () => {
     if (!autocompleteRef.current || !window.google?.maps?.places) return;
