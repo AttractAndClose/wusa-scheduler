@@ -97,7 +97,9 @@ npm start
 
 2. **Book an appointment:**
    - Go to the home page
-   - Enter a customer address (street, city, state, zip)
+   - Enter a customer address in the single-line input field
+     - Type to see Google Maps autocomplete suggestions (if API key is configured)
+     - Or paste/type a full address (e.g., "123 Main St, Phoenix, AZ 85001")
    - Click "Find Available Times"
    - Select an available time slot
    - Fill in customer details and confirm booking
@@ -112,11 +114,44 @@ npm start
    - Optionally enter a customer address to see coverage
    - See rep locations, service radii, and appointments on the map
 
+## 🔧 Configuration
+
+### Google Maps API (Optional but Recommended)
+
+To enable Google Maps address autocomplete:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a project and enable **Places API** and **Geocoding API**
+3. Create an API key
+4. Add to `.env.local` (local) or Vercel environment variables:
+   ```
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key_here
+   ```
+
+**Note:** Without the API key, the address input still works but uses manual parsing instead of autocomplete.
+
+### Salesforce Integration
+
+The booking page accepts address data via URL parameters for Salesforce integration:
+
+**Option 1: Full address string**
+```
+/?address=123%20Main%20St,%20Phoenix,%20AZ%2085001
+```
+
+**Option 2: Individual components**
+```
+/?street=123%20Main%20St&city=Phoenix&state=AZ&zip=85001
+```
+
+Create a Salesforce button or link that redirects to your booking page with these parameters.
+
 ## 📝 Notes
 
 - All data is stored in JSON files (no database for MVP)
 - Uses Haversine formula for distance calculations (no API needed)
 - Leaflet.js for maps (no API key required)
+- Address input supports Google Maps autocomplete (optional) or manual entry
 - Ready for Vercel deployment
 
 ## 🔗 Resources

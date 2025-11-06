@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AddressSearch } from '@/components/booking/AddressSearch';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
@@ -15,7 +16,8 @@ import type { Address, SlotAvailability } from '@/types';
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
+function HomeContent() {
+  const searchParams = useSearchParams();
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [availability, setAvailability] = useState<SlotAvailability[][]>([]);
   const [selectedSlot, setSelectedSlot] = useState<SlotAvailability | null>(null);
@@ -23,6 +25,7 @@ export default function Home() {
   const [reps, setReps] = useState<any[]>([]);
   const [availabilityData, setAvailabilityData] = useState<any>({});
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [initialAddress, setInitialAddress] = useState<string>('');
 
   // Load data on mount
   useEffect(() => {
@@ -38,6 +41,29 @@ export default function Home() {
     }
     loadData();
   }, []);
+
+  // Check for address in URL parameters (for Salesforce integration)
+  useEffect(() => {
+    if (searchParams) {
+      // Check for full address string
+      const addressParam = searchParams.get('address');
+      if (addressParam) {
+        setInitialAddress(decodeURIComponent(addressParam));
+        return;
+      }
+
+      // Check for individual address components
+      const street = searchParams.get('street');
+      const city = searchParams.get('city');
+      const state = searchParams.get('state');
+      const zip = searchParams.get('zip');
+
+      if (street && city && state && zip) {
+        const fullAddress = `${decodeURIComponent(street)}, ${decodeURIComponent(city)}, ${state.toUpperCase()} ${zip}`;
+        setInitialAddress(fullAddress);
+      }
+    }
+  }, [searchParams]);
 
   const handleAddressSearch = async (address: Address) => {
     setCustomerAddress(address);
@@ -130,7 +156,11 @@ export default function Home() {
             <h2 className="text-xl font-semibold text-navy mb-4">
               Enter Customer Address
             </h2>
-            <AddressSearch onSearch={handleAddressSearch} isLoading={isLoading} />
+            <AddressSearch 
+              onSearch={handleAddressSearch} 
+              isLoading={isLoading}
+              initialAddress={initialAddress}
+            />
           </div>
 
           {/* Availability Grid */}
@@ -162,5 +192,20 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-navy">Loading...</p>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
