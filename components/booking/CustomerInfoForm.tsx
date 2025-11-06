@@ -170,7 +170,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
             const formatted = formatAddressString(address);
             setAddressInput(formatted);
             setShowSuggestions(false);
-            onSearch(address);
+            handleAddressFound(address);
           }
         }
       });
