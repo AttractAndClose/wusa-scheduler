@@ -1,5 +1,26 @@
 # Vercel Deployment Notes
 
+## Environment Variables
+
+### Required Clerk Environment Variables
+
+For the app to work properly, you need to set these environment variables in Vercel:
+
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Add the following variables:
+
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_bG92aW5nLWNhcmlib3UtNDIuY2xlcmsuYWNjb3VudHMuZGV2JA
+CLERK_SECRET_KEY=sk_test_wnerWAXbs5mNc90hM11kMiaRwDpiXF0fvX639FLiWG
+```
+
+3. Make sure to set them for **Production**, **Preview**, and **Development** environments
+4. Redeploy after adding the variables
+
+### Local Development
+
+The `.env.local` file has been created with the Clerk keys. This file is gitignored and will not be committed.
+
 ## Build Warnings (Not Errors)
 
 The deprecation warnings you see are normal and don't prevent deployment:
@@ -29,7 +50,7 @@ This means:
 
 ## Deployment Checklist
 
-- [ ] Clerk environment variables set in Vercel
+- [x] Clerk environment variables set in Vercel (see above)
 - [ ] Build completes successfully (warnings are OK)
 - [ ] App loads at Vercel URL
 - [ ] Sign-in page works
