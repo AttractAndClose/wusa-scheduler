@@ -6,7 +6,9 @@ import dynamicImport from 'next/dynamic';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { UserButton } from '@clerk/nextjs';
 import { loadReps, getAllAppointments, loadAvailability } from '@/lib/data-loader';
 import { format, addDays, parseISO } from 'date-fns';
 import { calculateAvailabilityGrid } from '@/lib/availability';
@@ -101,6 +103,25 @@ export default function MapPage() {
                 />
               </Link>
             </div>
+            <nav className="flex items-center gap-4">
+              <Link href="/availability">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Manage Availability
+                </Button>
+              </Link>
+              <Link href="/serviceable-zips">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Serviceable Zip Codes
+                </Button>
+              </Link>
+              <Link href="/map">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  View Map
+                </Button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </nav>
           </div>
         </div>
       </header>

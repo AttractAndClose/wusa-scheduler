@@ -5,12 +5,15 @@ import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Phone, Mail } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Calendar, Phone, Mail, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { UserButton } from '@clerk/nextjs';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import { calculateAvailabilityGrid } from '@/lib/availability';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, addWeeks, addDays } from 'date-fns';
 import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep } from '@/types';
 
 // Force dynamic rendering
@@ -28,6 +31,7 @@ function AvailabilityContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [addressAvailability, setAddressAvailability] = useState<any[][]>([]);
+  const [selectedRepId, setSelectedRepId] = useState<string>('all');
 
   // Redirect if not signed in
   useEffect(() => {
@@ -222,12 +226,51 @@ function AvailabilityContent() {
                 />
               </Link>
             </div>
+            <nav className="flex items-center gap-4">
+              <Link href="/availability">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Manage Availability
+                </Button>
+              </Link>
+              <Link href="/serviceable-zips">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  Serviceable Zip Codes
+                </Button>
+              </Link>
+              <Link href="/map">
+                <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
+                  <MapPin className="mr-2 h-4 w-4" />
+                  View Map
+                </Button>
+              </Link>
+              <UserButton afterSignOutUrl="/" />
+            </nav>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Rep Filter Dropdown */}
+        <Card className="p-4 mb-6 border border-gray-300 bg-white">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="rep-filter" className="text-navy font-medium">Filter by Rep:</Label>
+            <Select value={selectedRepId} onValueChange={setSelectedRepId}>
+              <SelectTrigger id="rep-filter" className="w-64 border-gray-300">
+                <SelectValue placeholder="All Reps" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Reps</SelectItem>
+                {reps.map(rep => (
+                  <SelectItem key={rep.id} value={rep.id}>
+                    {rep.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </Card>
+
         {customerAddress && (
           <div className="mb-6 bg-white rounded-lg shadow-md border border-gray-300 p-4">
             <h2 className="text-lg font-semibold text-navy mb-2">Availability for Address</h2>
@@ -246,70 +289,106 @@ function AvailabilityContent() {
         )}
         
         <div className="space-y-6">
-          {reps.map((rep) => {
-            const repAvailability = availability[rep.id] || {};
-            const repAppointments = getRepAppointments(rep.id);
-            const upcomingAppointments = repAppointments
-              .filter(apt => apt.date >= format(new Date(), 'yyyy-MM-dd'))
-              .sort((a, b) => a.date.localeCompare(b.date));
+          {reps
+            .filter(rep => selectedRepId === 'all' || rep.id === selectedRepId)
+            .map((rep) => {
+              const repAvailability = availability[rep.id] || {};
+              const repAppointments = getRepAppointments(rep.id);
+              const upcomingAppointments = repAppointments
+                .filter(apt => apt.date >= format(new Date(), 'yyyy-MM-dd'))
+                .sort((a, b) => a.date.localeCompare(b.date));
 
-            return (
-              <Card key={rep.id} className="p-6 border border-gray-300 shadow-md">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
-                      <div
-                        className="w-4 h-4 rounded-full"
-                        style={{ backgroundColor: rep.color }}
-                      ></div>
-                      {rep.name}
-                    </h2>
-                    <div className="mt-2 space-y-1 text-sm text-navy/70">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        {rep.email}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {rep.phone}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {repAppointments.length} appointment{repAppointments.length !== 1 ? 's' : ''} scheduled
-                      </div>
-                      {customerAddress && (
+              // Generate 3 weeks of availability
+              const weeks = [0, 1, 2].map(weekOffset => {
+                const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
+                const weekEnd = addDays(weekStart, 6);
+                return {
+                  start: weekStart,
+                  end: weekEnd,
+                  dates: Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+                };
+              });
+
+              return (
+                <Card key={rep.id} className="p-6 border border-gray-300 shadow-md">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
+                        <div
+                          className="w-4 h-4 rounded-full"
+                          style={{ backgroundColor: rep.color }}
+                        ></div>
+                        {rep.name}
+                      </h2>
+                      <div className="mt-2 space-y-1 text-sm text-navy/70">
                         <div className="flex items-center gap-2">
-                          <div className="h-4 w-4 rounded-full bg-green-500"></div>
-                          {getRepAvailabilityForAddress(rep.id) || 0} available slots for this address
+                          <Mail className="h-4 w-4" />
+                          {rep.email}
                         </div>
-                      )}
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-4 w-4" />
+                          {rep.phone}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {repAppointments.length} appointment{repAppointments.length !== 1 ? 's' : ''} scheduled
+                        </div>
+                        {customerAddress && (
+                          <div className="flex items-center gap-2">
+                            <div className="h-4 w-4 rounded-full bg-green-500"></div>
+                            {getRepAvailabilityForAddress(rep.id) || 0} available slots for this address
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="mt-4">
-                  <h3 className="text-sm font-medium text-navy mb-3">
-                    Weekly Availability
-                  </h3>
-                  <div className="grid grid-cols-7 gap-2">
-                    {DAYS.map((day) => (
-                      <div key={day} className="space-y-1">
-                        <div className="text-xs font-medium text-navy capitalize">
-                          {day.substring(0, 3)}
-                        </div>
-                        <div className="space-y-1">
-                          {TIME_SLOTS.map((slot) => {
-                            const isAvailable = repAvailability[day]?.includes(slot);
+                  {/* 3 Weeks of Availability */}
+                  <div className="space-y-6">
+                    {weeks.map((week, weekIndex) => (
+                      <div key={weekIndex}>
+                        <h3 className="text-sm font-medium text-navy mb-3">
+                          Week of {format(week.start, 'MMM d')} - {format(week.end, 'MMM d, yyyy')}
+                        </h3>
+                        <div className="grid grid-cols-7 gap-2">
+                          {week.dates.map((date, dayIndex) => {
+                            const dayName = DAYS[dayIndex];
+                            const dateString = format(date, 'yyyy-MM-dd');
+                            const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+                            const dayAppointments = repAppointments.filter(
+                              apt => apt.date === dateString && apt.status === 'scheduled'
+                            );
+
                             return (
-                              <div
-                                key={slot}
-                                className={`text-xs p-1 rounded ${
-                                  isAvailable
-                                    ? 'bg-primary/20 text-primary font-medium border border-primary/30'
-                                    : 'bg-gray-light text-gray-dark'
-                                }`}
-                              >
-                                {slot}
+                              <div key={dayIndex} className="space-y-1">
+                                <div className={`text-xs font-medium text-center py-1 rounded ${
+                                  isToday ? 'bg-navy text-white' : 'text-navy'
+                                }`}>
+                                  <div>{format(date, 'EEE').toUpperCase()}</div>
+                                  <div className={`text-sm font-bold ${isToday ? 'text-white' : 'text-navy'}`}>
+                                    {format(date, 'd')}
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  {TIME_SLOTS.map((slot) => {
+                                    const isAvailable = repAvailability[dayName]?.includes(slot);
+                                    const hasAppointment = dayAppointments.some(apt => apt.timeSlot === slot);
+                                    
+                                    return (
+                                      <div
+                                        key={slot}
+                                        className={`text-xs p-2 rounded text-center ${
+                                          isAvailable && !hasAppointment
+                                            ? 'bg-green-100 text-green-800 font-medium border border-green-300'
+                                            : 'bg-gray-100 text-gray-500'
+                                        }`}
+                                      >
+                                        {slot === '10am' ? '10:00 AM' :
+                                         slot === '2pm' ? '2:00 PM' : '7:00 PM'}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             );
                           })}
@@ -317,45 +396,44 @@ function AvailabilityContent() {
                       </div>
                     ))}
                   </div>
-                </div>
 
-                {upcomingAppointments.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-300">
-                    <h3 className="text-sm font-medium text-navy mb-3">
-                      Upcoming Appointments
-                    </h3>
-                    <div className="space-y-2">
-                      {upcomingAppointments.slice(0, 5).map((apt) => (
-                        <div
-                          key={apt.id}
-                          className="flex items-center justify-between p-2 bg-gray-light rounded text-sm"
-                        >
-                          <div>
-                            <div className="font-medium text-navy">
-                              {apt.customerName}
-                            </div>
-                            <div className="text-navy/70">
-                              {format(parseISO(apt.date), 'MMM d, yyyy')} at{' '}
-                              {apt.timeSlot === '10am' ? '10:00 AM' :
-                               apt.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM'}
-                            </div>
-                            <div className="text-navy/50 text-xs">
-                              {apt.address.city}, {apt.address.state}
+                  {upcomingAppointments.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-300">
+                      <h3 className="text-sm font-medium text-navy mb-3">
+                        Upcoming Appointments
+                      </h3>
+                      <div className="space-y-2">
+                        {upcomingAppointments.slice(0, 5).map((apt) => (
+                          <div
+                            key={apt.id}
+                            className="flex items-center justify-between p-2 bg-gray-light rounded text-sm"
+                          >
+                            <div>
+                              <div className="font-medium text-navy">
+                                {apt.customerName}
+                              </div>
+                              <div className="text-navy/70">
+                                {format(parseISO(apt.date), 'MMM d, yyyy')} at{' '}
+                                {apt.timeSlot === '10am' ? '10:00 AM' :
+                                 apt.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM'}
+                              </div>
+                              <div className="text-navy/50 text-xs">
+                                {apt.address.city}, {apt.address.state}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
-                      {upcomingAppointments.length > 5 && (
-                        <div className="text-xs text-navy/50 text-center pt-2">
-                          +{upcomingAppointments.length - 5} more
-                        </div>
-                      )}
+                        ))}
+                        {upcomingAppointments.length > 5 && (
+                          <div className="text-xs text-navy/50 text-center pt-2">
+                            +{upcomingAppointments.length - 5} more
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+                  )}
+                </Card>
+              );
+            })}
         </div>
       </main>
     </div>
