@@ -147,6 +147,52 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData?.address]);
 
+  const formatAddressString = (address: Address): string => {
+    return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
+  };
+
+  const parseGooglePlace = (place: any): Address | null => {
+    if (!place.geometry || !place.address_components) return null;
+
+    let street = '';
+    let city = '';
+    let state = '';
+    let zip = '';
+
+    place.address_components.forEach((component: any) => {
+      const types = component.types;
+
+      if (types.includes('street_number')) {
+        street = component.long_name + ' ';
+      }
+      if (types.includes('route')) {
+        street += component.long_name;
+      }
+      if (types.includes('locality')) {
+        city = component.long_name;
+      }
+      if (types.includes('administrative_area_level_1')) {
+        state = component.short_name;
+      }
+      if (types.includes('postal_code')) {
+        zip = component.long_name;
+      }
+    });
+
+    if (!street || !city || !state || !zip) {
+      return null;
+    }
+
+    return {
+      street: street.trim(),
+      city,
+      state,
+      zip,
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng(),
+    };
+  };
+
   const initializeAutocomplete = () => {
     if (!autocompleteRef.current || !window.google?.maps?.places) return;
 
@@ -276,52 +322,6 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData }: CustomerI
       }
     }
     setShowSuggestions(false);
-  };
-
-  const parseGooglePlace = (place: any): Address | null => {
-    if (!place.geometry || !place.address_components) return null;
-
-    let street = '';
-    let city = '';
-    let state = '';
-    let zip = '';
-
-    place.address_components.forEach((component: any) => {
-      const types = component.types;
-
-      if (types.includes('street_number')) {
-        street = component.long_name + ' ';
-      }
-      if (types.includes('route')) {
-        street += component.long_name;
-      }
-      if (types.includes('locality')) {
-        city = component.long_name;
-      }
-      if (types.includes('administrative_area_level_1')) {
-        state = component.short_name;
-      }
-      if (types.includes('postal_code')) {
-        zip = component.long_name;
-      }
-    });
-
-    if (!street || !city || !state || !zip) {
-      return null;
-    }
-
-    return {
-      street: street.trim(),
-      city,
-      state,
-      zip,
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng(),
-    };
-  };
-
-  const formatAddressString = (address: Address): string => {
-    return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
   };
 
   const handleAddressFound = async (address: Address) => {
