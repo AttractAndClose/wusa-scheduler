@@ -218,7 +218,7 @@ function HomeContent() {
             <nav className="flex items-center gap-4">
               <Link href="/availability">
                 <Button variant="outline" className="border-navy text-navy hover:bg-navy hover:text-white">
-                  Manage Availability
+                  Rep Availability
                 </Button>
               </Link>
             <Link href="/appointments">
