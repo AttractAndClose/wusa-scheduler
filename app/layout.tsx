@@ -28,6 +28,7 @@ export default function RootLayout({
 
   return (
     <ClerkProvider
+      publishableKey={publishableKey}
       signUpUrl={undefined}
       signInUrl="/sign-in"
       afterSignInUrl="/"
