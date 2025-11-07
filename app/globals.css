@@ -24,3 +24,21 @@ body {
 /* Leaflet map styles */
 @import 'leaflet/dist/leaflet.css';
 
+/* Ensure Leaflet maps stay behind dialogs */
+.leaflet-container {
+  z-index: 1 !important;
+}
+
+.leaflet-pane {
+  z-index: 1 !important;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1 !important;
+}
+
+.leaflet-control-container {
+  z-index: 1 !important;
+}
+

@@ -26,7 +26,7 @@ export function Sidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-white border-r-2 border-primary shadow-sm">
+    <div className="flex h-screen w-64 flex-col bg-white border-r-2 border-navy shadow-sm">
       {/* Logo - Centered */}
       <div className="flex h-16 items-center justify-center px-6 border-b border-gray-200">
         <Link href="/" className="flex items-center">
@@ -59,45 +59,56 @@ export function Sidebar() {
       </nav>
 
       {/* User Section */}
-      {isLoaded && user && (
-        <div className="border-t border-gray-200 p-4 space-y-3">
-          {/* User Info with Clickable UserButton */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <UserButton 
-                afterSignOutUrl="/"
-                appearance={{
-                  elements: {
-                    avatarBox: 'h-10 w-10 cursor-pointer',
-                    userButtonPopoverCard: 'shadow-lg',
+      {isLoaded && (
+        user ? (
+          <div className="border-t border-gray-200 p-4 space-y-3">
+            {/* User Info with Clickable UserButton */}
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <UserButton 
+                  afterSignOutUrl="/"
+                  appearance={{
+                    elements: {
+                      avatarBox: 'h-10 w-10 cursor-pointer',
+                      userButtonPopoverCard: 'shadow-lg',
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-navy truncate">
+                  {user.firstName || user.lastName 
+                    ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                    : user.emailAddresses[0]?.emailAddress || 'User'
                   }
-                }}
-              />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-navy truncate">
-                {user.firstName || user.lastName 
-                  ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-                  : user.emailAddresses[0]?.emailAddress || 'User'
-                }
-              </p>
-              {user.emailAddresses[0]?.emailAddress && (
-                <p className="text-xs text-navy/70 truncate">
-                  {user.emailAddresses[0].emailAddress}
                 </p>
-              )}
+                {user.emailAddresses[0]?.emailAddress && (
+                  <p className="text-xs text-navy/70 truncate">
+                    {user.emailAddresses[0].emailAddress}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Logout Link */}
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 w-full text-sm text-navy hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-gray-light"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Log Out</span>
-          </button>
-        </div>
+            {/* Logout Link */}
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 w-full text-sm text-navy hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-gray-light"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Log Out</span>
+            </button>
+          </div>
+        ) : (
+          <div className="border-t border-gray-200 p-4">
+            <Link
+              href="/sign-in"
+              className="flex items-center justify-center gap-2 w-full text-sm text-navy hover:text-primary transition-colors px-2 py-1.5 rounded hover:bg-gray-light"
+            >
+              <span>Sign In</span>
+            </Link>
+          </div>
+        )
       )}
     </div>
   );

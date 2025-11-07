@@ -12,7 +12,7 @@ import type {
 } from '@/types';
 
 const TIME_SLOTS: TimeSlot[] = ['10am', '2pm', '7pm'];
-const DRIVE_RADIUS_MILES = 45;
+const DRIVE_RADIUS_MILES = 60; // Increased to 60 miles to cover areas like Tom Bean, TX
 
 // Map time slots to numeric order for comparison
 const TIME_SLOT_ORDER: Record<TimeSlot, number> = {
@@ -32,7 +32,7 @@ function getRepAnchorPoint(
 ): AnchorPoint {
   // Find all appointments for this rep on this date
   const todaysAppointments = appointments.filter(
-    apt => apt.repId === rep.id && apt.date === date && apt.status === 'scheduled'
+    apt => apt.repId && apt.repId === rep.id && apt.date === date && apt.status === 'scheduled'
   );
   
   if (todaysAppointments.length === 0) {
@@ -87,6 +87,14 @@ function calculateSlotAvailability(
   const dayOfWeek = format(parseISO(date), 'EEEE').toLowerCase() as keyof Availability[string];
   const availableReps: AvailableRep[] = [];
   
+  // Debug logging
+  if (reps.length === 0) {
+    console.warn('No reps loaded for availability calculation');
+  }
+  if (Object.keys(availability).length === 0) {
+    console.warn('No availability data loaded');
+  }
+  
   for (const rep of reps) {
     // Check 1: Is rep available this day/time?
     const repAvailability = availability[rep.id];
@@ -97,6 +105,7 @@ function calculateSlotAvailability(
     // Check 2: Does rep have a conflict?
     const hasConflict = appointments.some(
       apt =>
+        apt.repId &&
         apt.repId === rep.id &&
         apt.date === date &&
         apt.timeSlot === timeSlot &&
@@ -116,6 +125,11 @@ function calculateSlotAvailability(
       customerAddress.lat,
       customerAddress.lng
     );
+    
+    // Debug: Log first few reps and distances
+    if (availableReps.length < 3) {
+      console.log(`Rep ${rep.name} (${rep.startingAddress.city}): distance=${distance.toFixed(1)} miles, available=${distance <= DRIVE_RADIUS_MILES}`);
+    }
     
     // Check 5: Is customer within drive radius?
     if (distance <= DRIVE_RADIUS_MILES) {

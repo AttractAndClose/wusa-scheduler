@@ -63,8 +63,7 @@
   "rep3": {
     "monday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "tuesday": [
       "10am",
@@ -106,7 +105,9 @@
       "7pm"
     ],
     "thursday": [
-      "10am"
+      "10am",
+      "2pm",
+      "7pm"
     ],
     "friday": [
       "10am",
@@ -151,7 +152,8 @@
   "rep6": {
     "monday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "tuesday": [
       "10am",
@@ -295,6 +297,7 @@
   "rep11": {
     "monday": [
       "10am",
+      "2pm",
       "7pm"
     ],
     "tuesday": [
@@ -380,7 +383,9 @@
   },
   "rep14": {
     "monday": [
-      "10am"
+      "10am",
+      "2pm",
+      "7pm"
     ],
     "tuesday": [
       "10am",
@@ -394,8 +399,7 @@
     ],
     "thursday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "friday": [
       "10am",
@@ -427,6 +431,7 @@
       "7pm"
     ],
     "friday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -485,13 +490,9 @@
     ],
     "friday": [
       "10am",
-      "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep18": {
@@ -613,7 +614,6 @@
   "rep22": {
     "monday": [
       "10am",
-      "2pm",
       "7pm"
     ],
     "tuesday": [
@@ -720,7 +720,8 @@
     ],
     "friday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "saturday": [],
     "sunday": []
@@ -751,13 +752,15 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep27": {
     "monday": [
       "10am",
-      "2pm",
       "7pm"
     ],
     "tuesday": [
@@ -859,7 +862,6 @@
     ],
     "thursday": [
       "10am",
-      "2pm",
       "7pm"
     ],
     "friday": [
@@ -877,7 +879,6 @@
       "7pm"
     ],
     "tuesday": [
-      "10am",
       "2pm",
       "7pm"
     ],
@@ -917,15 +918,17 @@
     ],
     "thursday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "friday": [
       "10am",
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep33": {
@@ -965,9 +968,11 @@
     ],
     "tuesday": [
       "10am",
+      "2pm",
       "7pm"
     ],
     "wednesday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -997,7 +1002,6 @@
     ],
     "wednesday": [
       "10am",
-      "2pm",
       "7pm"
     ],
     "thursday": [
@@ -1016,8 +1020,7 @@
   "rep36": {
     "monday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "tuesday": [
       "10am",
@@ -1039,7 +1042,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep37": {
@@ -1078,6 +1084,7 @@
       "7pm"
     ],
     "tuesday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -1092,12 +1099,11 @@
       "7pm"
     ],
     "friday": [
-      "10am"
-    ],
-    "saturday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
+    "saturday": [],
     "sunday": []
   },
   "rep39": {
@@ -1155,10 +1161,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep41": {
@@ -1187,10 +1190,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep42": {
@@ -1230,8 +1230,7 @@
     ],
     "tuesday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "wednesday": [
       "10am",
@@ -1248,7 +1247,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep44": {
@@ -1303,17 +1305,14 @@
     ],
     "friday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "saturday": [],
     "sunday": []
   },
   "rep46": {
     "monday": [
-      "10am",
-      "2pm",
-      "7pm"
+      "10am"
     ],
     "tuesday": [
       "10am",
@@ -1349,8 +1348,7 @@
     ],
     "tuesday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "wednesday": [
       "10am",
@@ -1367,7 +1365,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep48": {
@@ -1378,8 +1379,7 @@
     ],
     "tuesday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "wednesday": [
       "10am",
@@ -1406,7 +1406,7 @@
       "7pm"
     ],
     "tuesday": [
-      "2pm",
+      "10am",
       "7pm"
     ],
     "wednesday": [
@@ -1464,7 +1464,8 @@
     ],
     "tuesday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "wednesday": [
       "2pm",
@@ -1495,6 +1496,7 @@
       "7pm"
     ],
     "wednesday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -1633,7 +1635,8 @@
   "rep57": {
     "monday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "tuesday": [
       "10am",
@@ -1684,10 +1687,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep59": {
@@ -1716,11 +1716,15 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep60": {
     "monday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -1744,10 +1748,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep61": {
@@ -1767,7 +1768,6 @@
       "7pm"
     ],
     "thursday": [
-      "10am",
       "2pm",
       "7pm"
     ],
@@ -1784,7 +1784,9 @@
   },
   "rep62": {
     "monday": [
-      "2pm"
+      "10am",
+      "2pm",
+      "7pm"
     ],
     "tuesday": [
       "10am",
@@ -1798,6 +1800,7 @@
     ],
     "thursday": [
       "10am",
+      "2pm",
       "7pm"
     ],
     "friday": [
@@ -1816,7 +1819,8 @@
     ],
     "tuesday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "wednesday": [
       "10am",
@@ -1848,33 +1852,6 @@
       "7pm"
     ],
     "wednesday": [
-      "2pm"
-    ],
-    "thursday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "friday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "saturday": [],
-    "sunday": []
-  },
-  "rep65": {
-    "monday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "tuesday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "wednesday": [
       "10am",
       "2pm",
       "7pm"
@@ -1895,6 +1872,31 @@
     ],
     "sunday": []
   },
+  "rep65": {
+    "monday": [
+      "7pm"
+    ],
+    "tuesday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "wednesday": [
+      "2pm"
+    ],
+    "thursday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "friday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "saturday": [],
+    "sunday": []
+  },
   "rep66": {
     "monday": [
       "10am",
@@ -1913,7 +1915,8 @@
     ],
     "thursday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "friday": [
       "10am",
@@ -1991,7 +1994,6 @@
       "7pm"
     ],
     "tuesday": [
-      "10am",
       "2pm",
       "7pm"
     ],
@@ -2039,10 +2041,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep71": {
@@ -2068,10 +2067,12 @@
     ],
     "friday": [
       "10am",
-      "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep72": {
@@ -2100,10 +2101,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep73": {
@@ -2119,33 +2117,8 @@
     ],
     "wednesday": [
       "10am",
-      "7pm"
-    ],
-    "thursday": [
-      "10am",
       "2pm",
       "7pm"
-    ],
-    "friday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "saturday": [],
-    "sunday": []
-  },
-  "rep74": {
-    "monday": [
-      "10am",
-      "2pm",
-      "7pm"
-    ],
-    "tuesday": [
-      "10am",
-      "2pm"
-    ],
-    "wednesday": [
-      "2pm"
     ],
     "thursday": [
       "10am",
@@ -2163,7 +2136,7 @@
     ],
     "sunday": []
   },
-  "rep75": {
+  "rep74": {
     "monday": [
       "10am",
       "2pm",
@@ -2175,6 +2148,35 @@
       "7pm"
     ],
     "wednesday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "thursday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "friday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "saturday": [],
+    "sunday": []
+  },
+  "rep75": {
+    "monday": [
+      "10am",
+      "2pm",
+      "7pm"
+    ],
+    "tuesday": [
+      "10am",
+      "2pm"
+    ],
+    "wednesday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -2232,7 +2234,6 @@
       "7pm"
     ],
     "wednesday": [
-      "10am",
       "2pm",
       "7pm"
     ],
@@ -2308,6 +2309,8 @@
   },
   "rep80": {
     "monday": [
+      "10am",
+      "2pm",
       "7pm"
     ],
     "tuesday": [
@@ -2330,7 +2333,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep81": {
@@ -2388,10 +2394,7 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [
-      "10am",
-      "2pm"
-    ],
+    "saturday": [],
     "sunday": []
   },
   "rep83": {
@@ -2420,7 +2423,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep84": {
@@ -2436,7 +2442,6 @@
     ],
     "wednesday": [
       "10am",
-      "2pm",
       "7pm"
     ],
     "thursday": [
@@ -2499,9 +2504,11 @@
     ],
     "thursday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "friday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -2530,6 +2537,7 @@
       "7pm"
     ],
     "friday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -2544,7 +2552,8 @@
     ],
     "tuesday": [
       "10am",
-      "2pm"
+      "2pm",
+      "7pm"
     ],
     "wednesday": [
       "10am",
@@ -2637,8 +2646,6 @@
       "7pm"
     ],
     "wednesday": [
-      "10am",
-      "2pm",
       "7pm"
     ],
     "thursday": [
@@ -2701,11 +2708,9 @@
     ],
     "thursday": [
       "10am",
-      "2pm",
-      "7pm"
+      "2pm"
     ],
     "friday": [
-      "10am",
       "2pm",
       "7pm"
     ],
@@ -2738,7 +2743,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   },
   "rep95": {
@@ -2787,6 +2795,7 @@
       "7pm"
     ],
     "thursday": [
+      "10am",
       "2pm",
       "7pm"
     ],
@@ -2853,7 +2862,10 @@
       "2pm",
       "7pm"
     ],
-    "saturday": [],
+    "saturday": [
+      "10am",
+      "2pm"
+    ],
     "sunday": []
   }
 }

@@ -12,7 +12,12 @@ interface SlotCardProps {
 
 export function SlotCard({ slot, onSelect }: SlotCardProps) {
   const date = parseISO(slot.date);
-  const isPast = date < new Date();
+  // Only disable if date is before today (not today itself)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const slotDate = new Date(date);
+  slotDate.setHours(0, 0, 0, 0);
+  const isPast = slotDate < today;
   
   const isAvailable = slot.status !== 'none';
   const isDisabled = slot.status === 'none' || isPast;

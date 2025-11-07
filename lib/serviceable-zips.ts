@@ -40,7 +40,15 @@ export function loadServiceableZipsFromStorage(): ServiceableZip[] {
   try {
     const stored = localStorage.getItem('serviceableZips');
     if (stored) {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      // If stored data is the old small sample (less than 1000 zips), clear it
+      // This ensures we use the new comprehensive JSON file
+      if (parsed.length > 0 && parsed.length < 1000) {
+        console.log('Clearing old zip code cache, using new comprehensive list');
+        localStorage.removeItem('serviceableZips');
+        return [];
+      }
+      return parsed;
     }
   } catch (error) {
     console.error('Error loading serviceable zip codes from storage:', error);
@@ -50,20 +58,49 @@ export function loadServiceableZipsFromStorage(): ServiceableZip[] {
 }
 
 /**
+ * Clear localStorage cache (useful when zip code list is updated)
+ */
+export function clearServiceableZipsCache(): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem('serviceableZips');
+  cachedServiceableZips = null;
+}
+
+/**
  * Get all serviceable zip codes (combines JSON file + localStorage)
+ * JSON file is the source of truth, localStorage only stores user modifications
  */
 export async function getAllServiceableZips(): Promise<ServiceableZip[]> {
   const jsonZips = await loadServiceableZips();
   const storedZips = loadServiceableZipsFromStorage();
   
-  // If we have stored zips with actual data, use those (they override JSON)
-  // But if stored zips is empty array, use JSON instead
-  if (storedZips.length > 0) {
-    return storedZips;
+  // If no JSON zips loaded, return empty array
+  if (jsonZips.length === 0) {
+    return storedZips.length > 0 ? storedZips : [];
   }
   
-  // Return JSON zips (or empty array if JSON failed to load)
-  return jsonZips;
+  // If we have stored zips (user modifications), merge them with JSON
+  // Create a map of stored zips by zip code for quick lookup
+  const storedZipMap = new Map<string, ServiceableZip>();
+  storedZips.forEach(zip => {
+    storedZipMap.set(zip.zip, zip);
+  });
+  
+  // Merge: use JSON as base, but override with stored modifications (exclusions, notes)
+  const mergedZips = jsonZips.map(jsonZip => {
+    const storedZip = storedZipMap.get(jsonZip.zip);
+    if (storedZip) {
+      // Use stored zip's excluded and notes, but keep JSON's other data
+      return {
+        ...jsonZip,
+        excluded: storedZip.excluded,
+        notes: storedZip.notes
+      };
+    }
+    return jsonZip;
+  });
+  
+  return mergedZips;
 }
 
 /**

@@ -11,7 +11,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
 import type { Address, SlotAvailability } from '@/types';
-import { startOfWeek, addWeeks } from 'date-fns';
+import { addDays } from 'date-fns';
 
 // Dynamically import AddressMap to avoid SSR issues with Leaflet
 const AddressMap = dynamic(() => import('@/components/booking/AddressMap').then(mod => ({ default: mod.AddressMap })), {
@@ -32,6 +32,13 @@ function HomeContent() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [initialAddress, setInitialAddress] = useState<string>('');
   const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = current week, 1 = next week, -1 = previous week
+  const [customerInfo, setCustomerInfo] = useState<{
+    leadId?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+  }>({});
   const [initialCustomerData, setInitialCustomerData] = useState<{
     leadId?: string;
     firstName?: string;
@@ -99,6 +106,13 @@ function HomeContent() {
 
       if (Object.keys(customerData).length > 0) {
         setInitialCustomerData(customerData);
+        setCustomerInfo({
+          leadId: customerData.leadId,
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          email: customerData.email,
+          phone: customerData.phone,
+        });
         if (customerData.address) {
           setInitialAddress(customerData.address);
         }
@@ -106,11 +120,14 @@ function HomeContent() {
     }
   }, [searchParams]);
 
-  // Calculate the start date for the current week view
-  const getWeekStartDate = (offset: number = weekOffset) => {
+  // Calculate the start date - always start from today
+  const getStartDate = (offset: number = weekOffset) => {
     const today = new Date();
-    const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
-    return addWeeks(currentWeekStart, offset);
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    // Add offset days (0 = today, 7 = next week, -7 = previous week)
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() + (offset * 7));
+    return startDate;
   };
 
   // Recalculate availability when week changes
@@ -140,24 +157,41 @@ function HomeContent() {
   };
 
   const handleAddressSearch = async (address: Address) => {
+    console.log('Address search triggered:', address);
+    console.log('Address coordinates:', { lat: address.lat, lng: address.lng });
     setCustomerAddress(address);
-    setWeekOffset(0); // Reset to current week when new address is searched
+    setWeekOffset(0); // Reset to today when new address is searched
     setIsLoading(true);
 
     try {
-      // Reload appointments to get latest
-      const latestAppointments = await getAllAppointments();
+      // Ensure we have all data loaded before calculating
+      const [repsData, availabilityDataLoaded, latestAppointments] = await Promise.all([
+        loadReps(),
+        loadAvailability(),
+        getAllAppointments()
+      ]);
+      
+      console.log('Loaded reps:', repsData.length);
+      console.log('Loaded availability keys:', Object.keys(availabilityDataLoaded).length);
+      console.log('Loaded appointments:', latestAppointments.length);
+      
+      // Update state
+      setReps(repsData);
+      setAvailabilityData(availabilityDataLoaded);
       setAppointments(latestAppointments);
 
-      const startDate = getWeekStartDate();
+      const startDate = getStartDate();
+      console.log('Start date:', startDate);
       const grid = calculateAvailabilityGrid(
         address,
         startDate,
-        reps,
-        availabilityData,
+        repsData,
+        availabilityDataLoaded,
         latestAppointments,
         5
       );
+      console.log('Availability grid calculated:', grid);
+      console.log('First slot:', grid[0]?.[0]);
       setAvailability(grid);
     } catch (error) {
       console.error('Error calculating availability:', error);
@@ -170,7 +204,7 @@ function HomeContent() {
   const handleWeekChange = (direction: 'prev' | 'next') => {
     const newOffset = direction === 'next' ? weekOffset + 1 : weekOffset - 1;
     setWeekOffset(newOffset);
-    const newStartDate = getWeekStartDate(newOffset);
+    const newStartDate = getStartDate(newOffset);
     recalculateAvailability(newStartDate);
   };
 
@@ -180,13 +214,24 @@ function HomeContent() {
     }
   };
 
+  const handleRefresh = () => {
+    // Clear all customer data and reset form
+    setCustomerAddress(null);
+    setAvailability([]);
+    setSelectedSlot(null);
+    setWeekOffset(0);
+    setCustomerInfo({});
+    setInitialCustomerData({});
+    setInitialAddress('');
+  };
+
   const handleBookingConfirm = async () => {
     // Reload appointments and recalculate availability
     const latestAppointments = await getAllAppointments();
     setAppointments(latestAppointments);
 
     if (customerAddress) {
-      const startDate = getWeekStartDate();
+      const startDate = getStartDate();
       const grid = calculateAvailabilityGrid(
         customerAddress,
         startDate,
@@ -212,6 +257,7 @@ function HomeContent() {
               onSearch={handleAddressSearch} 
               isLoading={isLoading}
               initialData={initialCustomerData}
+              onCustomerInfoChange={setCustomerInfo}
             />
           </div>
 
@@ -257,8 +303,10 @@ function HomeContent() {
             <BookingModal
               slot={selectedSlot}
               customerAddress={customerAddress}
+              customerInfo={customerInfo}
               onClose={() => setSelectedSlot(null)}
               onConfirm={handleBookingConfirm}
+              onRefresh={handleRefresh}
             />
           )}
         </div>

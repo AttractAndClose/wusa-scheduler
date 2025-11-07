@@ -110,9 +110,9 @@ export default function ScheduleMap({
                 position={anchorPoint}
                 icon={L.divIcon({
                   className: 'custom-marker',
-                  html: `<div style="background-color: ${rep.color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-                  iconSize: [20, 20],
-                  iconAnchor: [10, 10],
+                  html: `<div style="background-color: #2563EB; width: 12px; height: 12px; border-radius: 50%; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 6],
                 })}
               >
                 <Popup>
@@ -134,7 +134,7 @@ export default function ScheduleMap({
               {/* Service radius circle */}
               <Circle
                 center={anchorPoint}
-                radius={45 * 1609.34} // Convert 45 miles to meters
+                radius={60 * 1609.34} // Convert 60 miles to meters
                 pathOptions={{
                   color: isAvailable ? rep.color : '#gray',
                   fillColor: isAvailable ? rep.color : '#gray',
@@ -157,9 +157,9 @@ export default function ScheduleMap({
               position={[apt.address.lat, apt.address.lng]}
               icon={L.divIcon({
                 className: 'custom-marker',
-                html: `<div style="background-color: #EF4444; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-                iconSize: [16, 16],
-                iconAnchor: [8, 8],
+                html: `<div style="background-color: #EF4444; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [10, 10],
+                iconAnchor: [5, 5],
               })}
             >
               <Popup>
@@ -177,28 +177,6 @@ export default function ScheduleMap({
           );
         })}
 
-        {/* Customer location */}
-        {customerAddress && (
-          <Marker
-            position={[customerAddress.lat, customerAddress.lng]}
-            icon={L.divIcon({
-              className: 'custom-marker',
-              html: `<div style="background-color: #F59E0B; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
-              iconSize: [24, 24],
-              iconAnchor: [12, 12],
-            })}
-          >
-            <Popup>
-              <div className="text-sm">
-                <div className="font-semibold">Customer Location</div>
-                <div className="text-gray-600">{customerAddress.street}</div>
-                <div className="text-gray-600">
-                  {customerAddress.city}, {customerAddress.state} {customerAddress.zip}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        )}
       </MapContainer>
     </div>
   );

@@ -46,11 +46,11 @@ export function AddressMap({ address }: AddressMapProps) {
   const zoom = getZoomLevel(address.state);
 
   return (
-    <div className="h-[400px] w-full rounded-lg overflow-hidden border border-gray-300">
+    <div className="h-[400px] w-full rounded-lg overflow-hidden border border-gray-300 relative z-0">
       <MapContainer
         center={[address.lat, address.lng]}
         zoom={zoom}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', zIndex: 0 }}
         ref={mapRef}
         scrollWheelZoom={true}
       >

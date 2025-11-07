@@ -64,6 +64,7 @@ zips.sort((a, b) => {
   return a.zip.localeCompare(b.zip);
 });
 
-console.log(`Generated ${zips.length} zip codes`);
-console.log(JSON.stringify(zips, null, 2));
+// Output JSON only (log message goes to stderr, JSON to stdout)
+process.stderr.write(`Generated ${zips.length} zip codes\n`);
+process.stdout.write(JSON.stringify(zips, null, 2));
 

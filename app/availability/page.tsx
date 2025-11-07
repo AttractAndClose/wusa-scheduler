@@ -275,10 +275,6 @@ function AvailabilityContent() {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h2 className="text-xl font-semibold text-navy flex items-center gap-2">
-                        <div
-                          className="w-4 h-4 rounded-full"
-                          style={{ backgroundColor: rep.color }}
-                        ></div>
                         {rep.name}
                       </h2>
                       <div className="mt-2 space-y-1 text-sm text-navy/70">

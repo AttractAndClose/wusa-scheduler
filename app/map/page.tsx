@@ -90,14 +90,14 @@ export default function MapPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {/* Controls */}
-          <Card className="p-4">
+          <Card className="p-4 bg-white">
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Select Date
                 </label>
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -115,7 +115,7 @@ export default function MapPage() {
                   Select Time
                 </label>
                 <Select value={selectedTimeSlot} onValueChange={(value: '10am' | '2pm' | '7pm') => setSelectedTimeSlot(value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -171,9 +171,9 @@ export default function MapPage() {
           )}
 
           {/* Legend */}
-          <Card className="p-4">
+          <Card className="p-4 bg-white">
             <h3 className="text-sm font-semibold text-gray-900 mb-3">Legend</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-full bg-blue-500"></div>
                 <span>Rep Starting Location</span>
@@ -184,11 +184,7 @@ export default function MapPage() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 border-2 border-blue-300 rounded-full"></div>
-                <span>Service Radius (45 miles)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
-                <span>Customer Location</span>
+                <span>Service Radius (60 miles)</span>
               </div>
             </div>
           </Card>

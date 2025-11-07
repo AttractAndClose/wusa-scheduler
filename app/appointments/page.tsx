@@ -185,7 +185,6 @@ function AppointmentsContent() {
                             <span className="font-medium text-navy">{getTimeDisplay(apt.timeSlot)}</span>
                           </div>
                           <div className="flex items-center gap-2 text-sm text-navy/70">
-                            <div className="h-4 w-4 rounded-full" style={{ backgroundColor: repColor }}></div>
                             <span className="font-medium text-navy">{repName}</span>
                           </div>
                         </div>

@@ -34,13 +34,15 @@ export type TimeSlot = '10am' | '2pm' | '7pm';
 
 export interface Appointment {
   id: string;
-  repId: string;
+  repId?: string; // Optional - not assigned until later
   date: string; // ISO format: 'YYYY-MM-DD'
   timeSlot: TimeSlot;
   customerName: string;
   customerPhone?: string;
   customerEmail?: string;
+  leadId?: string;
   address: Address;
+  notes?: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   createdAt: string;
 }
