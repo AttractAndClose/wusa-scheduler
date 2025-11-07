@@ -58,6 +58,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
   const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false);
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const autocompleteInstanceRef = useRef<any>(null);
+  const geocoderRef = useRef<any>(null);
   // Update parent component when customer info changes
   useEffect(() => {
     if (onCustomerInfoChange) {
@@ -494,7 +495,6 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
       'Raymond': { lat: 32.2593, lng: -90.4226 },
       'Southaven': { lat: 34.9910, lng: -90.0026 },
       'Pearl': { lat: 32.2746, lng: -90.1320 },
-      'Greenville': { lat: 33.4101, lng: -91.0617 },
       'Carriere': { lat: 30.6169, lng: -89.6526 },
       'Columbus': { lat: 33.4950, lng: -88.4274 },
       
@@ -534,7 +534,6 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
       'Hot Springs': { lat: 34.5037, lng: -93.0550 },
       
       // North Carolina cities
-      'Graham': { lat: 36.0690, lng: -79.4006 },
       
       // South Carolina cities
       'Ladson': { lat: 33.0007, lng: -80.1048 },

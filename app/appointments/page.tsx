@@ -78,12 +78,14 @@ function AppointmentsContent() {
     }
   }, [selectedRepId, appointments]);
 
-  const getRepName = (repId: string) => {
+  const getRepName = (repId?: string) => {
+    if (!repId) return 'Unassigned';
     const rep = reps.find(r => r.id === repId);
     return rep?.name || 'Unknown Rep';
   };
 
-  const getRepColor = (repId: string) => {
+  const getRepColor = (repId?: string) => {
+    if (!repId) return '#999999';
     const rep = reps.find(r => r.id === repId);
     return rep?.color || '#999999';
   };
@@ -151,7 +153,6 @@ function AppointmentsContent() {
           <div className="space-y-4">
             {filteredAppointments.map((apt) => {
               const repName = getRepName(apt.repId);
-              const repColor = getRepColor(apt.repId);
               const aptDate = parseISO(apt.date);
               const isToday = format(aptDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
@@ -160,10 +161,6 @@ function AppointmentsContent() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-3">
-                        <div
-                          className="w-4 h-4 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: repColor }}
-                        ></div>
                         <h3 className="text-xl font-semibold text-navy">{apt.customerName}</h3>
                         {isToday && (
                           <span className="px-2 py-1 text-xs font-medium bg-primary text-white rounded">
