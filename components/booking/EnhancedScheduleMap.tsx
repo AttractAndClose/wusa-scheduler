@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip } from 'react-leaflet';
 import L from 'leaflet';
-import type { Address, Appointment, SalesRep, Availability } from '@/types';
+import type { Address, Appointment, SalesRep, Availability, TimeSlot } from '@/types';
 import { format, parseISO, startOfWeek, addDays, isSameWeek, getDay } from 'date-fns';
 import { calculateDistance } from '@/lib/distance';
 
@@ -79,22 +79,29 @@ export function EnhancedScheduleMap({
 }: EnhancedScheduleMapProps) {
   const mapRef = useRef<L.Map | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null); // null = "All Appointments" (default), or date string
-
+  const [dayOffset, setDayOffset] = useState(0); // For scrolling through days
   // Get today's date
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = format(today, 'yyyy-MM-dd');
+  
+  // Default to today
+  const [selectedDay, setSelectedDay] = useState<string | null>(todayStr);
 
-  // Generate day buttons (today + next 4 days)
-  const dayButtons = [
-    { label: 'All Appointments', date: null },
-    { label: format(today, 'EEE, MMM d'), date: todayStr },
-    { label: format(addDays(today, 1), 'EEE, MMM d'), date: format(addDays(today, 1), 'yyyy-MM-dd') },
-    { label: format(addDays(today, 2), 'EEE, MMM d'), date: format(addDays(today, 2), 'yyyy-MM-dd') },
-    { label: format(addDays(today, 3), 'EEE, MMM d'), date: format(addDays(today, 3), 'yyyy-MM-dd') },
-    { label: format(addDays(today, 4), 'EEE, MMM d'), date: format(addDays(today, 4), 'yyyy-MM-dd') },
-  ];
+  // Generate day buttons (today + next 4 days) with offset support
+  const generateDayButtons = () => {
+    const startDate = addDays(today, dayOffset);
+    return [
+      { label: 'All Appointments', date: null },
+      { label: format(startDate, 'EEE, MMM d'), date: format(startDate, 'yyyy-MM-dd') },
+      { label: format(addDays(startDate, 1), 'EEE, MMM d'), date: format(addDays(startDate, 1), 'yyyy-MM-dd') },
+      { label: format(addDays(startDate, 2), 'EEE, MMM d'), date: format(addDays(startDate, 2), 'yyyy-MM-dd') },
+      { label: format(addDays(startDate, 3), 'EEE, MMM d'), date: format(addDays(startDate, 3), 'yyyy-MM-dd') },
+      { label: format(addDays(startDate, 4), 'EEE, MMM d'), date: format(addDays(startDate, 4), 'yyyy-MM-dd') },
+    ];
+  };
+  
+  const dayButtons = generateDayButtons();
 
   // Filter appointments based on selected day
   const filteredAppointments = selectedDay === null
@@ -146,17 +153,32 @@ export function EnhancedScheduleMap({
 
       const repAvailability = availability[rep.id] || {};
       
+      // Get appointments for this rep
+      const repAppointments = appointments.filter(apt => 
+        apt.repId === rep.id && 
+        apt.status === 'scheduled' &&
+        (selectedDay === null || apt.date === selectedDay)
+      );
+      
       if (selectedDay === null) {
         // Show all available days for the week
-        const availableDays: { day: string; date: string }[] = [];
+        const availableDays: { day: string; date: string; slots: TimeSlot[] }[] = [];
         for (let i = 0; i < 7; i++) {
           const checkDate = addDays(weekStart, i);
           const dayName = format(checkDate, 'EEEE').toLowerCase() as keyof typeof repAvailability;
+          const dateStr = format(checkDate, 'yyyy-MM-dd');
           
-          if (repAvailability[dayName] && repAvailability[dayName].length > 0) {
+          const daySlots = repAvailability[dayName] || [];
+          const bookedSlots = repAppointments
+            .filter(apt => apt.date === dateStr)
+            .map(apt => apt.timeSlot);
+          const availableSlots = daySlots.filter((slot: TimeSlot) => !bookedSlots.includes(slot));
+          
+          if (daySlots.length > 0) {
             availableDays.push({
               day: format(checkDate, 'EEE'),
-              date: format(checkDate, 'MMM d')
+              date: format(checkDate, 'MMM d'),
+              slots: availableSlots
             });
           }
         }
@@ -164,26 +186,47 @@ export function EnhancedScheduleMap({
           rep,
           distance,
           availableDays,
-          isAvailable: availableDays.length > 0
+          isAvailable: availableDays.length > 0,
+          appointments: repAppointments,
+          bookedSlots: undefined,
+          availableSlots: undefined
         };
       } else {
         // Check availability for the selected day
         const selectedDate = parseISO(selectedDay);
         const dayName = format(selectedDate, 'EEEE').toLowerCase() as keyof typeof repAvailability;
-        const isAvailable = repAvailability[dayName] && repAvailability[dayName].length > 0;
+        const daySlots = repAvailability[dayName] || [];
+        const bookedSlots = repAppointments
+          .filter(apt => apt.date === selectedDay)
+          .map(apt => apt.timeSlot);
+        const availableSlots = daySlots.filter((slot: TimeSlot) => !bookedSlots.includes(slot));
+        const isAvailable = availableSlots.length > 0;
         
         return {
           rep,
           distance,
-          availableDays: isAvailable ? [{
+          availableDays: daySlots.length > 0 ? [{
             day: format(selectedDate, 'EEE'),
-            date: format(selectedDate, 'MMM d')
+            date: format(selectedDate, 'MMM d'),
+            slots: availableSlots
           }] : [],
-          isAvailable
+          isAvailable,
+          appointments: repAppointments.filter(apt => apt.date === selectedDay),
+          bookedSlots,
+          availableSlots
         };
       }
     })
-    .filter((item): item is { rep: SalesRep; distance: number; availableDays: { day: string; date: string }[]; isAvailable: boolean } => item !== null)
+    .filter((item) => item !== null)
+    .map((item) => item as {
+      rep: SalesRep; 
+      distance: number; 
+      availableDays: { day: string; date: string; slots: TimeSlot[] }[]; 
+      isAvailable: boolean;
+      appointments: Appointment[];
+      bookedSlots?: TimeSlot[];
+      availableSlots?: TimeSlot[];
+    })
     .sort((a, b) => {
       // Sort by availability first (available first), then by distance
       if (a.isAvailable !== b.isAvailable) {
@@ -208,12 +251,23 @@ export function EnhancedScheduleMap({
       {/* Left side: Map and Legend */}
       <div className="lg:col-span-2 space-y-4">
         {/* Day Filter Buttons */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setDayOffset(prev => Math.max(0, prev - 1))}
+            disabled={dayOffset === 0}
+            className={`px-2 py-2 rounded-md text-xs font-medium transition-colors ${
+              dayOffset === 0
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            ← Back
+          </button>
           {dayButtons.map((button) => (
             <button
               key={button.date || 'all'}
               onClick={() => setSelectedDay(button.date)}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                 selectedDay === button.date
                   ? 'bg-navy text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -222,6 +276,12 @@ export function EnhancedScheduleMap({
               {button.label}
             </button>
           ))}
+          <button
+            onClick={() => setDayOffset(prev => prev + 1)}
+            className="px-2 py-2 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            Forward →
+          </button>
         </div>
 
         {/* Map */}
@@ -240,17 +300,17 @@ export function EnhancedScheduleMap({
             
             <MapUpdater customerAddress={customerAddress} />
             
-            {/* Customer address marker - Pin icon */}
+            {/* Customer address marker - Red Pin */}
             <Marker
               position={[customerAddress.lat, customerAddress.lng]}
-              icon={L.icon({
-                iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+              icon={L.divIcon({
+                className: 'custom-red-marker',
+                html: `<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+                  <path fill="#EF4444" d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.1 12.5 28.5 12.5 28.5S25 20.6 25 12.5C25 5.6 19.4 0 12.5 0zm0 17c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z"/>
+                </svg>`,
                 iconSize: [25, 41],
                 iconAnchor: [12, 41],
                 popupAnchor: [1, -34],
-                shadowSize: [41, 41]
               })}
             >
               <Popup>
@@ -261,12 +321,37 @@ export function EnhancedScheduleMap({
                 </div>
               </Popup>
             </Marker>
+            
+            {/* Rep markers - Blue pins */}
+            {repsWithin75Miles.map((rep) => (
+              <Marker
+                key={rep.id}
+                position={[rep.startingAddress.lat, rep.startingAddress.lng]}
+                icon={L.icon({
+                  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+                  iconSize: [25, 41],
+                  iconAnchor: [12, 41],
+                  popupAnchor: [1, -34],
+                  shadowSize: [41, 41]
+                })}
+              >
+                <Popup>
+                  <div className="text-sm">
+                    <div className="font-semibold text-navy">{rep.name}</div>
+                    <div className="text-gray-600">{rep.startingAddress.street}</div>
+                    <div className="text-gray-600">{rep.startingAddress.city}, {rep.startingAddress.state} {rep.startingAddress.zip}</div>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
 
-            {/* Filtered appointments */}
+            {/* Filtered appointments - All blue */}
             {filteredAppointments.map((apt) => {
               const aptDate = parseISO(apt.date);
               const dayOfWeek = getDay(aptDate);
-              const color = DAY_COLORS[dayOfWeek] || '#6B7280';
+              const color = '#2563EB'; // All appointments are blue
               const rep = apt.repId ? reps.find(r => r.id === apt.repId) : null;
               
               // Calculate distance from customer
@@ -327,38 +412,30 @@ export function EnhancedScheduleMap({
 
         {/* Legend */}
         <div className="bg-white rounded-lg border border-gray-300 p-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Appointment Legend (This Week)</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            {/* Show days in order: Monday through Sunday */}
-            {[1, 2, 3, 4, 5, 6, 0].map((dayIndex) => {
-              const dayName = DAY_NAMES[dayIndex];
-              const color = DAY_COLORS[dayIndex];
-              const dayAppointments = appointmentsByDay[dayIndex] || [];
-              // Calculate the date for this day in the current week
-              // dayIndex 0 = Sunday (6 days after Monday), 1 = Monday (0 days), etc.
-              const dayOffset = dayIndex === 0 ? 6 : dayIndex - 1;
-              const dayDate = addDays(weekStart, dayOffset);
-              const dateStr = format(dayDate, 'MMM d');
-              const count = dayAppointments.length;
-              
-              return (
-                <div key={dayIndex} className="flex items-center gap-2">
-                  <div 
-                    className="w-4 h-4 rounded-full border-2 border-white shadow-sm"
-                    style={{ backgroundColor: color }}
-                  ></div>
-                  <div>
-                    <div className="font-medium text-gray-900">{dayName}</div>
-                    <div className="text-xs text-gray-500">{dateStr} {count > 0 && `(${count})`}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-3 pt-3 border-t border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Map Legend</h3>
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
-              <div className="w-4 h-4 rounded-full bg-red-600 border-2 border-white shadow-sm"></div>
+              <div 
+                className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                style={{ backgroundColor: '#2563EB' }}
+              ></div>
+              <span className="text-gray-700">Appointments</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-4 h-4">
+                <svg viewBox="0 0 25 41" className="w-4 h-4">
+                  <path fill="#EF4444" d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.1 12.5 28.5 12.5 28.5S25 20.6 25 12.5C25 5.6 19.4 0 12.5 0zm0 17c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z"/>
+                </svg>
+              </div>
               <span className="text-gray-700">Customer Location</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <div className="w-4 h-4">
+                <svg viewBox="0 0 25 41" className="w-4 h-4">
+                  <path fill="#2563EB" d="M12.5 0C5.6 0 0 5.6 0 12.5c0 8.1 12.5 28.5 12.5 28.5S25 20.6 25 12.5C25 5.6 19.4 0 12.5 0zm0 17c-2.5 0-4.5-2-4.5-4.5s2-4.5 4.5-4.5 4.5 2 4.5 4.5-2 4.5-4.5 4.5z"/>
+                </svg>
+              </div>
+              <span className="text-gray-700">Sales Reps</span>
             </div>
           </div>
         </div>
@@ -377,35 +454,59 @@ export function EnhancedScheduleMap({
           </h3>
           {availableReps.length > 0 ? (
             <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
-              {availableReps.map(({ rep, distance, availableDays, isAvailable }) => (
+              {availableReps.map(({ rep, distance, availableDays, isAvailable, appointments, bookedSlots, availableSlots }) => (
                 <div 
                   key={rep.id} 
-                  className={`flex items-start justify-between p-2 rounded hover:bg-gray-100 transition-colors ${
+                  className={`p-2 rounded hover:bg-gray-100 transition-colors ${
                     isAvailable ? 'bg-green-50' : 'bg-gray-50'
                   }`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <div className={`font-medium text-sm ${
-                        isAvailable ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
-                        {rep.name}
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className={`font-medium text-sm ${
+                          isAvailable ? 'text-gray-900' : 'text-gray-500'
+                        }`}>
+                          {rep.name}
+                        </div>
+                        {isAvailable ? (
+                          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Available</span>
+                        ) : (
+                          <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Not Available</span>
+                        )}
                       </div>
-                      {isAvailable ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Available</span>
-                      ) : (
-                        <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">Not Available</span>
+                    </div>
+                    <div className="text-xs font-semibold text-navy ml-2 flex-shrink-0">
+                      {distance.toFixed(1)} mi
+                    </div>
+                  </div>
+                  
+                  {selectedDay && (
+                    <div className="mt-2 space-y-1">
+                      {bookedSlots && bookedSlots.length > 0 && (
+                        <div className="text-xs">
+                          <span className="font-semibold text-gray-700">Booked:</span>
+                          <span className="ml-1 text-gray-600">
+                            {bookedSlots.map(slot => slot === '10am' ? '10:00 AM' : slot === '2pm' ? '2:00 PM' : '7:00 PM').join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      {availableSlots && availableSlots.length > 0 && (
+                        <div className="text-xs">
+                          <span className="font-semibold text-green-700">Available:</span>
+                          <span className="ml-1 text-green-600">
+                            {availableSlots.map(slot => slot === '10am' ? '10:00 AM' : slot === '2pm' ? '2:00 PM' : '7:00 PM').join(', ')}
+                          </span>
+                        </div>
                       )}
                     </div>
-                    {availableDays.length > 0 && (
-                      <div className="text-xs text-gray-600 mt-0.5 leading-tight">
-                        {availableDays.map(d => d.day).join(', ')}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-xs font-semibold text-navy ml-2 flex-shrink-0">
-                    {distance.toFixed(1)} mi
-                  </div>
+                  )}
+                  
+                  {selectedDay === null && availableDays.length > 0 && (
+                    <div className="text-xs text-gray-600 mt-1">
+                      {availableDays.map(d => `${d.day} (${d.slots.length} slots)`).join(', ')}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

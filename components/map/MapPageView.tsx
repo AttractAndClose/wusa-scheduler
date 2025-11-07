@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Tooltip, Circle } from 'react-leaflet';
 import L from 'leaflet';
-import type { Appointment, SalesRep, Availability, Address, Lead } from '@/types';
-import { format, parseISO, addDays } from 'date-fns';
+import type { Appointment, SalesRep, Availability, Address, Lead, TimeSlot } from '@/types';
+import { format, parseISO, addDays, startOfWeek, addWeeks, startOfDay, isBefore } from 'date-fns';
 import { calculateDistance } from '@/lib/distance';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // Fix for default marker icons in Next.js
 if (typeof window !== 'undefined') {
@@ -208,7 +209,14 @@ function MapLegend() {
             className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
             style={{ backgroundColor: '#EF4444' }}
           ></div>
-          <span className="text-sm text-gray-700">Leads</span>
+          <span className="text-sm text-gray-700">Leads (EF Score ≥ 640)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div 
+            className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
+            style={{ backgroundColor: '#2563EB' }}
+          ></div>
+          <span className="text-sm text-gray-700">Leads (EF Score 0 or 1)</span>
         </div>
       </div>
     </div>
@@ -320,9 +328,14 @@ export function MapPageView({
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
   const [zipCodeInput, setZipCodeInput] = useState('');
   const [zipCodeError, setZipCodeError] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'score' | 'availability'>('name');
+  const [sortBy, setSortBy] = useState<'name' | 'score' | 'availability'>('score');
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
   const [dayOffset, setDayOffset] = useState(0);
+  const [leadsPage, setLeadsPage] = useState(1);
+  const leadsPerPage = 50;
+  const [schedulingLead, setSchedulingLead] = useState<(Lead & { distance: number }) | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
 
   // Filter out Philadelphia reps (coordinates around 39.95, -75.16)
   // Philadelphia area: roughly lat 39.8-40.1, lng -75.3 to -74.9
@@ -557,28 +570,171 @@ export function MapPageView({
     // Toggle selection - if clicking the same rep, deselect
     if (selectedRepId === rep.id) {
       setSelectedRepId(null);
+      setLeadsPage(1); // Reset pagination
     } else {
       setSelectedRepId(rep.id);
+      setLeadsPage(1); // Reset to first page when selecting new rep
       if (mapRef.current) {
         const repLocation = getRepLocation(rep);
         
-        // Calculate bounds for 60 miles radius
-        const latRadius = 60 / 69;
-        const lngRadius = 60 / (69 * Math.cos(repLocation[0] * Math.PI / 180));
+        // Calculate bounds for 45 miles radius (to show the 45-mile circle clearly)
+        const latRadius = 45 / 69;
+        const lngRadius = 45 / (69 * Math.cos(repLocation[0] * Math.PI / 180));
         const bounds = L.latLngBounds(
           [repLocation[0] - latRadius, repLocation[1] - lngRadius],
           [repLocation[0] + latRadius, repLocation[1] + lngRadius]
         );
-        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+        mapRef.current.fitBounds(bounds, { padding: [20, 20] });
         setShouldAutoZoom(false); // Disable auto-zoom after manual zoom
       }
     }
   };
 
+  // Memoize leads calculation for selected rep (within 90 miles)
+  // This prevents recalculating distances on every render
+  const allLeadsForRep = useMemo(() => {
+    if (!selectedRepId) return [];
+    
+    const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+    if (!selectedRep) return [];
+    
+    const repLocation = getRepLocation(selectedRep);
+    
+    // Pre-filter by approximate bounding box first (faster than calculating all distances)
+    // Rough approximation: 1 degree latitude ≈ 69 miles, 1 degree longitude varies by latitude
+    const latRadius = 90 / 69;
+    const lngRadius = 90 / (69 * Math.cos(repLocation[0] * Math.PI / 180));
+    const minLat = repLocation[0] - latRadius;
+    const maxLat = repLocation[0] + latRadius;
+    const minLng = repLocation[1] - lngRadius;
+    const maxLng = repLocation[1] + lngRadius;
+    
+    // First pass: filter by bounding box (much faster)
+    const candidates = leads.filter(lead => 
+      lead.address.lat >= minLat && 
+      lead.address.lat <= maxLat &&
+      lead.address.lng >= minLng && 
+      lead.address.lng <= maxLng
+    );
+    
+    // Second pass: calculate exact distances only for candidates
+    const leadsWithDistance = candidates.map(lead => ({
+      ...lead,
+      distance: calculateDistance(
+        repLocation[0],
+        repLocation[1],
+        lead.address.lat,
+        lead.address.lng
+      )
+    })).filter(lead => lead.distance <= 90)
+      .sort((a, b) => a.distance - b.distance);
+    
+    return leadsWithDistance;
+  }, [selectedRepId, filteredReps, leads, selectedDay]);
+
+  const totalLeadsPages = useMemo(() => 
+    Math.ceil(allLeadsForRep.length / leadsPerPage),
+    [allLeadsForRep.length, leadsPerPage]
+  );
+
+  const paginatedLeads = useMemo(() => 
+    allLeadsForRep.slice(
+      (leadsPage - 1) * leadsPerPage,
+      leadsPage * leadsPerPage
+    ),
+    [allLeadsForRep, leadsPage, leadsPerPage]
+  );
+
+  // Get available time slots for the selected rep and lead
+  const getAvailableTimeSlots = () => {
+    if (!selectedRepId || !schedulingLead) return [];
+    
+    const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+    if (!selectedRep) return [];
+    
+    const repAvailability = availability[selectedRep.id] || {};
+    const days: (keyof typeof repAvailability)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+    
+    // Get next 5 weeks of dates
+    const today = new Date();
+    const startDate = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+    const availableSlots: Array<{ date: string; dayName: string; timeSlot: TimeSlot }> = [];
+    
+    for (let week = 0; week < 5; week++) {
+      const weekStart = addWeeks(startDate, week);
+      
+      days.forEach((dayName, dayIndex) => {
+        const date = addDays(weekStart, dayIndex);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        
+        // Check if rep is available on this day
+        const dayAvailability = repAvailability[dayName] || [];
+        
+        dayAvailability.forEach((slot: TimeSlot) => {
+          // Check if this slot is already booked
+          const isBooked = appointments.some(apt => 
+            apt.repId === selectedRep.id &&
+            apt.date === dateStr &&
+            apt.timeSlot === slot &&
+            apt.status !== 'cancelled'
+          );
+          
+          if (!isBooked) {
+            availableSlots.push({
+              date: dateStr,
+              dayName: format(date, 'EEEE'),
+              timeSlot: slot
+            });
+          }
+        });
+      });
+    }
+    
+    return availableSlots;
+  };
+
+  const availableTimeSlots = useMemo(() => getAvailableTimeSlots(), [selectedRepId, schedulingLead, filteredReps, availability, appointments]);
+  
+  // Group available slots by date
+  const slotsByDate = useMemo(() => {
+    const grouped: Record<string, Array<{ dayName: string; timeSlot: TimeSlot }>> = {};
+    availableTimeSlots.forEach(slot => {
+      if (!grouped[slot.date]) {
+        grouped[slot.date] = [];
+      }
+      grouped[slot.date].push({ dayName: slot.dayName, timeSlot: slot.timeSlot });
+    });
+    return grouped;
+  }, [availableTimeSlots]);
+
+  const handleScheduleClick = (lead: Lead & { distance: number }) => {
+    setSchedulingLead(lead);
+    setSelectedDate(null);
+    setSelectedTimeSlot(null);
+  };
+
+  const handleConfirmSchedule = () => {
+    if (!schedulingLead || !selectedRepId || !selectedDate || !selectedTimeSlot) return;
+    
+    // TODO: Implement actual scheduling logic
+    // For now, just close the modal
+    console.log('Schedule appointment:', {
+      lead: schedulingLead,
+      repId: selectedRepId,
+      date: selectedDate,
+      timeSlot: selectedTimeSlot
+    });
+    
+    setSchedulingLead(null);
+    setSelectedDate(null);
+    setSelectedTimeSlot(null);
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Left side: Map */}
-      <div className="lg:col-span-2 space-y-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left side: Map */}
+        <div className="lg:col-span-2 space-y-4">
         {/* Day Filter Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -658,6 +814,7 @@ export function MapPageView({
             style={{ height: '100%', width: '100%', zIndex: 0 }}
             ref={mapRef}
             scrollWheelZoom={true}
+            key="map-container"
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -745,62 +902,70 @@ export function MapPageView({
             );
           })}
 
-          {/* Lead markers - red pins (only show when rep is selected) */}
-          {selectedRepId && (() => {
-            const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
-            if (!selectedRep) return null;
+          {/* Lead markers - color based on EF Score (only show when rep is selected) */}
+          {/* Only render first 1000 leads on map to prevent performance issues */}
+          {selectedRepId && allLeadsForRep.slice(0, 1000).map((lead) => {
+            // Determine marker color based on EF Score
+            // Red if EF Score >= 640, Blue if EF Score is 0 or 1
+            const markerColor = (lead.efScore !== undefined && lead.efScore >= 640) ? '#EF4444' : '#2563EB';
             
-            const repLocation = getRepLocation(selectedRep);
-            
-            return leads.map((lead) => {
-              // Calculate distance from rep location to lead
-              const distance = calculateDistance(
-                repLocation[0],
-                repLocation[1],
-                lead.address.lat,
-                lead.address.lng
-              );
-              
-              return (
-                <Marker
-                  key={`lead-${lead.id}`}
-                  position={[lead.address.lat, lead.address.lng]}
-                  icon={L.divIcon({
-                    className: 'custom-marker',
-                    html: `<div style="background-color: #EF4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
-                    iconSize: [12, 12],
-                    iconAnchor: [6, 6],
-                  })}
-                >
-                  <Tooltip>
-                    <div className="text-xs font-semibold">{lead.name}</div>
-                  </Tooltip>
-                  <Popup>
-                    <div className="text-sm space-y-1">
-                      <div className="font-semibold text-navy">{lead.name}</div>
-                      <div className="text-gray-600">
-                        <strong>Email:</strong> {lead.email}
-                      </div>
-                      <div className="text-gray-600">
-                        <strong>Phone:</strong> {lead.phone}
-                      </div>
-                      <div className="text-gray-600">
-                        <strong>Address:</strong> {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
-                      </div>
-                      <div className="text-gray-600">
-                        <strong>Status:</strong> {lead.status || 'new'}
-                      </div>
-                      {selectedRepId && (
-                        <div className="text-gray-600 mt-1 pt-1 border-t border-gray-300">
-                          <strong>Distance from {selectedRep.name}:</strong> {distance.toFixed(1)} miles
-                        </div>
-                      )}
+            return (
+              <Marker
+                key={`lead-${lead.id}`}
+                position={[lead.address.lat, lead.address.lng]}
+                icon={L.divIcon({
+                  className: 'custom-marker',
+                  html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
+                  iconSize: [12, 12],
+                  iconAnchor: [6, 6],
+                })}
+              >
+                <Tooltip>
+                  <div className="text-xs font-semibold">{lead.name}</div>
+                </Tooltip>
+                <Popup>
+                  <div className="text-sm space-y-1">
+                    <div className="font-semibold text-navy">{lead.name}</div>
+                    <div className="text-gray-600">
+                      <strong>Email:</strong> {lead.email}
                     </div>
-                  </Popup>
-                </Marker>
-              );
-            });
-          })()}
+                    <div className="text-gray-600">
+                      <strong>Phone:</strong> {lead.phone}
+                    </div>
+                    <div className="text-gray-600">
+                      <strong>Address:</strong> {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
+                    </div>
+                    <div className="text-gray-600">
+                      <strong>Status:</strong> {lead.status || 'new'}
+                    </div>
+                    {lead.faradayCreditPropensity !== undefined && (
+                      <div className="text-gray-600">
+                        <strong>Faraday Credit Propensity:</strong> {lead.faradayCreditPropensity}/100
+                      </div>
+                    )}
+                    {lead.thinkUnlimitedScore && (
+                      <div className="text-gray-600">
+                        <strong>Think Unlimited Score:</strong> {lead.thinkUnlimitedScore}
+                      </div>
+                    )}
+                    {lead.efScore !== undefined && (
+                      <div className="text-gray-600">
+                        <strong>EF Score:</strong> {lead.efScore}
+                      </div>
+                    )}
+                    {selectedRepId && (() => {
+                      const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+                      return selectedRep ? (
+                        <div className="text-gray-600 mt-1 pt-1 border-t border-gray-300">
+                          <strong>Distance from {selectedRep.name}:</strong> {lead.distance.toFixed(1)} miles
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                </Popup>
+              </Marker>
+            );
+          })}
 
           {/* 45-mile radius circle for selected rep only */}
           {selectedRepId && (() => {
@@ -876,17 +1041,23 @@ export function MapPageView({
                 icon={markerIcon}
                 eventHandlers={{
                   click: () => {
-                    setSelectedRepId(rep.id);
-                    if (mapRef.current) {
-                      // Calculate bounds for 90 miles radius
-                      const latRadius = 90 / 69;
-                      const lngRadius = 90 / (69 * Math.cos(repLocation[0] * Math.PI / 180));
-                      const bounds = L.latLngBounds(
-                        [repLocation[0] - latRadius, repLocation[1] - lngRadius],
-                        [repLocation[0] + latRadius, repLocation[1] + lngRadius]
-                      );
-                      mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-                      setShouldAutoZoom(false);
+                    if (selectedRepId === rep.id) {
+                      setSelectedRepId(null);
+                      setLeadsPage(1);
+                    } else {
+                      setSelectedRepId(rep.id);
+                      setLeadsPage(1); // Reset to first page
+                      if (mapRef.current) {
+                        // Calculate bounds for 45 miles radius (to show the 45-mile circle clearly)
+                        const latRadius = 45 / 69;
+                        const lngRadius = 45 / (69 * Math.cos(repLocation[0] * Math.PI / 180));
+                        const bounds = L.latLngBounds(
+                          [repLocation[0] - latRadius, repLocation[1] - lngRadius],
+                          [repLocation[0] + latRadius, repLocation[1] + lngRadius]
+                        );
+                        mapRef.current.fitBounds(bounds, { padding: [20, 20] });
+                        setShouldAutoZoom(false);
+                      }
                     }
                   },
                 }}
@@ -911,15 +1082,15 @@ export function MapPageView({
               </Marker>
             );
           })}
-        </MapContainer>
+          </MapContainer>
         </div>
         
-        {/* Map Legend - below the map */}
-        <MapLegend />
-      </div>
+          {/* Map Legend - below the map */}
+          <MapLegend />
+        </div>
 
-      {/* Right side: Reps List */}
-      <div className="lg:col-span-1">
+        {/* Right side: Reps List */}
+        <div className="lg:col-span-1">
         <div className="bg-white rounded-lg border border-gray-300 p-4 h-full">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">
@@ -1150,7 +1321,355 @@ export function MapPageView({
           )}
         </div>
       </div>
-    </div>
+      </div>
+
+      {/* Weekly Calendar View for Selected Rep */}
+      {selectedRepId && (() => {
+        const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+        if (!selectedRep) return null;
+
+        const repAvailability = availability[selectedRep.id] || {};
+        const repAppointments = appointments.filter(apt => apt.repId === selectedRep.id && apt.status === 'scheduled');
+        
+        // Generate 2 weeks of availability (this week and next week)
+        const weeks = [0, 1].map(weekOffset => {
+          const weekStart = startOfWeek(addWeeks(new Date(), weekOffset), { weekStartsOn: 1 });
+          const weekEnd = addDays(weekStart, 6);
+          return {
+            start: weekStart,
+            end: weekEnd,
+            dates: Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
+          };
+        });
+
+        const DAYS: (keyof typeof repAvailability)[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+        const TIME_SLOTS: TimeSlot[] = ['10am', '2pm', '7pm'];
+
+        return (
+          <div className="w-full bg-white rounded-lg border border-gray-300 p-6 mt-6">
+            <h3 className="text-lg font-semibold text-navy mb-4">Availability Calendar</h3>
+            <div className="space-y-6">
+              {weeks.map((week, weekIndex) => (
+                <div key={weekIndex}>
+                  <h4 className="text-sm font-medium text-navy mb-3">
+                    Week of {format(week.start, 'MMM d')} - {format(week.end, 'MMM d, yyyy')}
+                  </h4>
+                  <div className="grid grid-cols-7 gap-2">
+                    {week.dates.map((date, dayIndex) => {
+                      const dayName = DAYS[dayIndex];
+                      const dateString = format(date, 'yyyy-MM-dd');
+                      const today = startOfDay(new Date());
+                      const dateDay = startOfDay(date);
+                      const isToday = format(dateDay, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+                      const isPast = isBefore(dateDay, today);
+                      const dayAppointments = repAppointments.filter(
+                        apt => apt.date === dateString && apt.status === 'scheduled'
+                      );
+
+                      return (
+                        <div key={dayIndex} className="space-y-1">
+                          <div className={`text-xs font-medium text-center py-1 rounded ${
+                            isToday 
+                              ? 'bg-red-500 text-white' 
+                              : isPast 
+                              ? 'bg-gray-300 text-gray-500' 
+                              : 'text-navy'
+                          }`}>
+                            <div>{format(date, 'EEE').toUpperCase()}</div>
+                            <div className={`text-sm font-bold ${
+                              isToday 
+                                ? 'text-white' 
+                                : isPast 
+                                ? 'text-gray-500' 
+                                : 'text-navy'
+                            }`}>
+                              {format(date, 'd')}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            {TIME_SLOTS.map((slot) => {
+                              const isAvailable = repAvailability[dayName]?.includes(slot);
+                              const hasAppointment = dayAppointments.some(apt => apt.timeSlot === slot);
+                              
+                              return (
+                                <div
+                                  key={slot}
+                                  className={`text-xs p-2 rounded text-center ${
+                                    isPast
+                                      ? 'bg-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
+                                      : hasAppointment
+                                      ? 'bg-orange-100 text-orange-800 font-medium border border-orange-300 cursor-default'
+                                      : isAvailable
+                                      ? 'bg-green-100 text-green-800 font-medium border border-green-300 cursor-default'
+                                      : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                                  }`}
+                                >
+                                  {slot === '10am' ? '10:00 AM' :
+                                   slot === '2pm' ? '2:00 PM' : '7:00 PM'}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Leads Container - Full width below map */}
+    {selectedRepId && (
+      <div className="w-full bg-white rounded-lg border border-gray-300 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">
+            Available Leads ({allLeadsForRep.length} within 90 miles)
+          </h3>
+          {totalLeadsPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLeadsPage(prev => Math.max(1, prev - 1))}
+                disabled={leadsPage === 1}
+                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {leadsPage} of {totalLeadsPages}
+              </span>
+              <button
+                onClick={() => setLeadsPage(prev => Math.min(totalLeadsPages, prev + 1))}
+                disabled={leadsPage === totalLeadsPages}
+                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="space-y-2">
+          {paginatedLeads.length === 0 ? (
+            <div className="text-sm text-gray-500 text-center py-8">No leads within 90 miles</div>
+          ) : (
+            paginatedLeads.map((lead) => (
+              <div
+                key={lead.id}
+                className="p-3 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1 grid grid-cols-7 gap-4">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Name</div>
+                      <div className="font-medium text-sm text-gray-900">{lead.name}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Email</div>
+                      <div className="text-sm text-gray-700">{lead.email}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Phone</div>
+                      <div className="text-sm text-gray-700">{lead.phone}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">Address</div>
+                      <div className="text-sm text-gray-700">
+                        {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
+                      </div>
+                    </div>
+                    {lead.faradayCreditPropensity !== undefined && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Faraday Credit</div>
+                        <div className="text-sm text-gray-700">{lead.faradayCreditPropensity}/100</div>
+                      </div>
+                    )}
+                    {lead.thinkUnlimitedScore && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Think Unlimited</div>
+                        <div className="text-sm text-gray-700">{lead.thinkUnlimitedScore}</div>
+                      </div>
+                    )}
+                    {lead.efScore !== undefined && (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">EF Score</div>
+                        <div className="text-sm text-gray-700">{lead.efScore}</div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-navy">{lead.distance.toFixed(1)}</div>
+                      <div className="text-xs text-gray-500">miles</div>
+                    </div>
+                    <button
+                      onClick={() => handleScheduleClick(lead)}
+                      className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"
+                    >
+                      Schedule
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    )}
+
+    {/* Schedule Appointment Modal */}
+    <Dialog open={schedulingLead !== null} onOpenChange={(open) => !open && setSchedulingLead(null)}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Schedule Appointment</DialogTitle>
+          <DialogDescription>
+            Select a date and time slot for this appointment
+          </DialogDescription>
+        </DialogHeader>
+        
+        {schedulingLead && selectedRepId && (() => {
+          const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+          if (!selectedRep) return null;
+          
+          return (
+            <div className="space-y-6 mt-4">
+              {/* Lead Information */}
+              <div className="border-b pb-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Lead Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Name:</span>
+                    <span className="ml-2 font-medium text-gray-900">{schedulingLead.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Email:</span>
+                    <span className="ml-2 font-medium text-gray-900">{schedulingLead.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="ml-2 font-medium text-gray-900">{schedulingLead.phone}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Status:</span>
+                    <span className="ml-2 font-medium text-gray-900 capitalize">{schedulingLead.status || 'new'}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Address:</span>
+                    <span className="ml-2 font-medium text-gray-900">
+                      {schedulingLead.address.street}, {schedulingLead.address.city}, {schedulingLead.address.state} {schedulingLead.address.zip}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Distance:</span>
+                    <span className="ml-2 font-medium text-gray-900">{schedulingLead.distance.toFixed(1)} miles</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rep Information */}
+              <div className="border-b pb-4">
+                <h3 className="font-semibold text-gray-900 mb-3">Sales Rep Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-500">Name:</span>
+                    <span className="ml-2 font-medium text-gray-900">{selectedRep.name}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Email:</span>
+                    <span className="ml-2 font-medium text-gray-900">{selectedRep.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Phone:</span>
+                    <span className="ml-2 font-medium text-gray-900">{selectedRep.phone}</span>
+                  </div>
+                  {selectedRep.successScore && (
+                    <div>
+                      <span className="text-gray-500">Success Score:</span>
+                      <span className="ml-2 font-medium text-gray-900">{selectedRep.successScore}/100</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Available Time Slots */}
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-3">Available Time Slots</h3>
+                {Object.keys(slotsByDate).length === 0 ? (
+                  <div className="text-sm text-gray-500 py-4">No available time slots for this rep</div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {Object.entries(slotsByDate)
+                      .sort(([dateA], [dateB]) => dateA.localeCompare(dateB))
+                      .map(([date, slots]) => {
+                        const dateObj = parseISO(date);
+                        const isSelected = selectedDate === date;
+                        
+                        return (
+                          <div key={date} className="border border-gray-200 rounded-lg p-3">
+                            <button
+                              onClick={() => {
+                                setSelectedDate(date);
+                                setSelectedTimeSlot(null);
+                              }}
+                              className={`w-full text-left font-medium text-sm mb-2 ${
+                                isSelected ? 'text-blue-600' : 'text-gray-900'
+                              }`}
+                            >
+                              {format(dateObj, 'EEEE, MMMM d, yyyy')}
+                            </button>
+                            {isSelected && (
+                              <div className="grid grid-cols-3 gap-2 mt-2">
+                                {slots.map((slot: { dayName: string; timeSlot: TimeSlot }) => {
+                                  const isSlotSelected = selectedTimeSlot === slot.timeSlot;
+                                  const timeLabel = slot.timeSlot === '10am' ? '10:00 AM' : 
+                                                  slot.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM';
+                                  
+                                  return (
+                                    <button
+                                      key={slot.timeSlot}
+                                      onClick={() => setSelectedTimeSlot(slot.timeSlot)}
+                                      className={`px-3 py-2 text-sm rounded border transition-colors ${
+                                        isSlotSelected
+                                          ? 'bg-blue-600 text-white border-blue-600'
+                                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      {timeLabel}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setSchedulingLead(null)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmSchedule}
+                  disabled={!selectedDate || !selectedTimeSlot}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Confirm Appointment
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </DialogContent>
+    </Dialog>
+  </div>
   );
 }
 

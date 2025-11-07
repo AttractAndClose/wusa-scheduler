@@ -35,26 +35,58 @@ function MapContent() {
   // Load data on mount
   useEffect(() => {
     async function loadData() {
+      if (!isLoaded) return; // Wait for Clerk to load first
+      
       setIsLoading(true);
       try {
+        console.log('Starting to load data...');
         const [repsData, availabilityData, appointmentsData, leadsData] = await Promise.all([
           loadReps(),
           loadAvailability(),
           getAllAppointments(),
           loadLeads()
         ]);
+        console.log('Data loaded:', {
+          reps: repsData.length,
+          availability: Object.keys(availabilityData).length,
+          appointments: appointmentsData.length,
+          leads: leadsData.length
+        });
         setReps(repsData);
         setAvailabilityData(availabilityData);
         setAppointments(appointmentsData);
         setLeads(leadsData);
       } catch (error) {
         console.error('Error loading data:', error);
+        // Set empty data on error so page can still render
+        setReps([]);
+        setAvailabilityData({});
+        setAppointments([]);
+        setLeads([]);
       } finally {
         setIsLoading(false);
+        console.log('Loading complete');
       }
     }
-    loadData();
-  }, []);
+    
+    if (isLoaded) {
+      loadData();
+    }
+  }, [isLoaded]);
+
+  // Show loading while Clerk is initializing
+  if (!isLoaded) {
+    return (
+      <AppLayout>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <p className="mt-4 text-navy">Initializing...</p>
+          </div>
+        </main>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>

@@ -42,9 +42,10 @@ interface CustomerInfoFormProps {
     email?: string;
     phone?: string;
   }) => void;
+  isReadOnly?: boolean;
 }
 
-export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerInfoChange }: CustomerInfoFormProps) {
+export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerInfoChange, isReadOnly = false }: CustomerInfoFormProps) {
   const [leadId, setLeadId] = useState(initialData?.leadId || '');
   const [firstName, setFirstName] = useState(initialData?.firstName || '');
   const [lastName, setLastName] = useState(initialData?.lastName || '');
@@ -155,16 +156,19 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
 
   // Auto-geocode address when address from initialData changes
   useEffect(() => {
-    if (initialData?.address && initialData.address !== addressInput && !hasAutoSubmitted) {
-      setAddressInput(initialData.address);
-      // Wait a bit for Google Maps to load if needed
+    if (initialData?.address && !hasAutoSubmitted) {
+      // Only update addressInput if it's different
+      if (initialData.address !== addressInput) {
+        setAddressInput(initialData.address);
+      }
+      // Wait a bit for Google Maps to load if needed, then geocode
       const timer = setTimeout(() => {
         geocodeAddress(initialData.address!, true); // true = auto-submit
       }, 1500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData?.address]);
+  }, [initialData?.address, hasAutoSubmitted]);
 
   const formatAddressString = (address: Address): string => {
     return `${address.street}, ${address.city}, ${address.state} ${address.zip}`;
@@ -618,8 +622,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             type="text"
             value={leadId}
             onChange={(e) => setLeadId(e.target.value)}
-            disabled={isLoading}
-            className="border-gray-300 focus:border-primary focus:ring-primary"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
           />
         </div>
         <div>
@@ -631,8 +638,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            disabled={isLoading}
-            className="border-gray-300 focus:border-primary focus:ring-primary"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
           />
         </div>
         <div>
@@ -644,8 +654,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            disabled={isLoading}
-            className="border-gray-300 focus:border-primary focus:ring-primary"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
           />
         </div>
       </div>
@@ -661,8 +674,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            disabled={isLoading}
-            className="border-gray-300 focus:border-primary focus:ring-primary"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
           />
         </div>
         <div>
@@ -674,8 +690,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={isLoading}
-            className="border-gray-300 focus:border-primary focus:ring-primary"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
           />
         </div>
         <div className="relative">
@@ -689,12 +708,15 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             placeholder="Enter or paste full address (e.g., 123 Main St, Phoenix, AZ 85001)"
             value={addressInput}
             onChange={(e) => handleAddressChange(e.target.value)}
-            disabled={isLoading}
-            required
-            className="border-gray-300 focus:border-primary focus:ring-primary text-base"
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            required={!isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary text-base ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+            }`}
             autoComplete="off"
           />
-          {showSuggestions && addressSuggestions.length > 0 && (
+          {!isReadOnly && showSuggestions && addressSuggestions.length > 0 && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
               {addressSuggestions.map((suggestion, index) => (
                 <button
@@ -708,9 +730,11 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
               ))}
             </div>
           )}
-          <p className="mt-1 text-xs text-navy/60">
-            Start typing to see address suggestions, or paste a full address
-          </p>
+          {!isReadOnly && (
+            <p className="mt-1 text-xs text-navy/60">
+              Start typing to see address suggestions, or paste a full address
+            </p>
+          )}
           {addressError && (
             <div className="mt-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
               {addressError}
@@ -719,10 +743,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
         </div>
       </div>
       
-      <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-dark text-white">
-        <Search className="mr-2 h-4 w-4" />
-        {isLoading ? 'Searching...' : 'Find Available Times'}
-      </Button>
+      {!isReadOnly && (
+        <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-dark text-white">
+          <Search className="mr-2 h-4 w-4" />
+          {isLoading ? 'Searching...' : 'Find Available Times'}
+        </Button>
+      )}
     </form>
   );
 }

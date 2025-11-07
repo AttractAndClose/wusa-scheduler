@@ -1,16 +1,17 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Calendar, Phone, Mail, Clock, MapPin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Calendar, Phone, Mail, Clock, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { getAllAppointments, loadReps } from '@/lib/data-loader';
 import type { Appointment } from '@/types';
-import { format, parseISO, isAfter, startOfDay } from 'date-fns';
+import { format, parseISO, isAfter, startOfDay, addDays, isSameDay } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,9 +19,10 @@ function AppointmentsContent() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [filteredAppointments, setFilteredAppointments] = useState<Appointment[]>([]);
   const [reps, setReps] = useState<any[]>([]);
   const [selectedRepId, setSelectedRepId] = useState<string>('all');
+  const [selectedState, setSelectedState] = useState<string>('all');
+  const [dayOffset, setDayOffset] = useState<number>(0); // 0 = today, 1 = tomorrow, etc.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -39,11 +41,13 @@ function AppointmentsContent() {
           loadReps()
         ]);
 
-        // Filter appointments: only today and future dates
+        // Filter appointments: only today and future dates (limit to next 30 days for performance)
         const today = startOfDay(new Date());
+        const maxDate = addDays(today, 30);
         const futureAppointments = appointmentsData.filter(apt => {
           const aptDate = startOfDay(parseISO(apt.date));
-          return isAfter(aptDate, today) || aptDate.getTime() === today.getTime();
+          return (isAfter(aptDate, today) || aptDate.getTime() === today.getTime()) && 
+                 (aptDate.getTime() <= maxDate.getTime());
         });
 
         // Sort by date and time
@@ -57,7 +61,6 @@ function AppointmentsContent() {
         });
 
         setAppointments(futureAppointments);
-        setFilteredAppointments(futureAppointments);
         setReps(repsData);
       } catch (error) {
         console.error('Error loading appointments:', error);
@@ -69,14 +72,51 @@ function AppointmentsContent() {
     loadData();
   }, [user, isLoaded, router]);
 
-  // Filter appointments by selected rep
-  useEffect(() => {
-    if (selectedRepId === 'all') {
-      setFilteredAppointments(appointments);
-    } else {
-      setFilteredAppointments(appointments.filter(apt => apt.repId === selectedRepId));
+  // Get unique states from appointments
+  const uniqueStates = useMemo(() => {
+    const states = new Set<string>();
+    appointments.forEach(apt => {
+      if (apt.address?.state) {
+        states.add(apt.address.state);
+      }
+    });
+    return Array.from(states).sort();
+  }, [appointments]);
+
+  // Get selected date
+  const selectedDate = useMemo(() => {
+    return addDays(startOfDay(new Date()), dayOffset);
+  }, [dayOffset]);
+
+  // Filter appointments by rep, state, and date
+  const filteredAppointments = useMemo(() => {
+    let filtered = [...appointments];
+
+    // Filter by rep
+    if (selectedRepId !== 'all') {
+      filtered = filtered.filter(apt => apt.repId === selectedRepId);
     }
-  }, [selectedRepId, appointments]);
+
+    // Filter by state
+    if (selectedState !== 'all') {
+      filtered = filtered.filter(apt => apt.address?.state === selectedState);
+    }
+
+    // Filter by selected date
+    filtered = filtered.filter(apt => {
+      const aptDate = startOfDay(parseISO(apt.date));
+      return isSameDay(aptDate, selectedDate);
+    });
+
+    // Sort by time
+    filtered.sort((a, b) => {
+      const timeOrder = { '10am': 1, '2pm': 2, '7pm': 3 };
+      return (timeOrder[a.timeSlot as keyof typeof timeOrder] || 0) - 
+             (timeOrder[b.timeSlot as keyof typeof timeOrder] || 0);
+    });
+
+    return filtered;
+  }, [appointments, selectedRepId, selectedState, selectedDate]);
 
   const getRepName = (repId?: string) => {
     if (!repId) return 'Unassigned';
@@ -115,27 +155,94 @@ function AppointmentsContent() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-navy mb-2">Scheduled Appointments</h1>
           <p className="text-navy/70">
-            Showing {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''} from today onwards
+            Showing {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''} for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
           </p>
         </div>
 
-        {/* Rep Filter Dropdown */}
+        {/* Filters */}
         <Card className="p-4 mb-6 border border-gray-300 bg-white">
-          <div className="flex items-center gap-4">
-            <Label htmlFor="rep-filter" className="text-navy font-medium">Filter by Rep:</Label>
-            <Select value={selectedRepId} onValueChange={setSelectedRepId}>
-              <SelectTrigger id="rep-filter" className="w-64 border-gray-300">
-                <SelectValue placeholder="All Reps" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Reps</SelectItem>
-                {reps.map(rep => (
-                  <SelectItem key={rep.id} value={rep.id}>
-                    {rep.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex flex-col md:flex-row gap-4 items-end">
+            <div className="flex-1 md:flex-initial">
+              <Label htmlFor="rep-filter" className="text-navy font-medium mb-1 block">Filter by Rep:</Label>
+              <Select value={selectedRepId} onValueChange={setSelectedRepId}>
+                <SelectTrigger id="rep-filter" className="w-full md:w-64 border-gray-300">
+                  <SelectValue placeholder="All Reps" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Reps</SelectItem>
+                  {reps.map(rep => (
+                    <SelectItem key={rep.id} value={rep.id}>
+                      {rep.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 md:flex-initial">
+              <Label htmlFor="state-filter" className="text-navy font-medium mb-1 block">Filter by State:</Label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger id="state-filter" className="w-full md:w-48 border-gray-300">
+                  <SelectValue placeholder="All States" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  {uniqueStates.map(state => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </Card>
+
+        {/* Day Filter Buttons */}
+        <Card className="p-4 mb-6 border border-gray-300 bg-white">
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDayOffset(prev => Math.max(0, prev - 1))}
+              disabled={dayOffset === 0}
+              className="flex-shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex gap-2 overflow-x-auto">
+              {Array.from({ length: 10 }, (_, i) => {
+                const dayDate = addDays(startOfDay(new Date()), dayOffset + i);
+                const isToday = dayOffset + i === 0;
+                const isSelected = i === 0;
+                const dayStr = format(dayDate, 'yyyy-MM-dd');
+                const dayName = isToday ? 'Today' : format(dayDate, 'EEE');
+                const dayNum = format(dayDate, 'd');
+                const month = format(dayDate, 'MMM');
+                
+                return (
+                  <Button
+                    key={dayStr}
+                    variant={isSelected ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDayOffset(dayOffset + i)}
+                    className={`flex-shrink-0 ${isSelected ? 'bg-primary text-white' : ''}`}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="text-xs font-medium">{dayName}</span>
+                      <span className="text-xs">{month} {dayNum}</span>
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDayOffset(prev => prev + 1)}
+              className="flex-shrink-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </Card>
 
@@ -143,69 +250,62 @@ function AppointmentsContent() {
           <Card className="p-8 text-center border border-gray-300 bg-white">
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <p className="text-navy/70 text-lg">
-              {selectedRepId === 'all' 
-                ? 'No upcoming appointments'
-                : `No upcoming appointments for ${getRepName(selectedRepId)}`
-              }
+              No appointments found for {format(selectedDate, 'EEEE, MMMM d, yyyy')}
             </p>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {filteredAppointments.map((apt) => {
               const repName = getRepName(apt.repId);
               const aptDate = parseISO(apt.date);
-              const isToday = format(aptDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
 
               return (
-                <Card key={apt.id} className="p-6 border border-gray-300 shadow-sm bg-white hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <h3 className="text-xl font-semibold text-navy">{apt.customerName}</h3>
-                        {isToday && (
-                          <span className="px-2 py-1 text-xs font-medium bg-primary text-white rounded">
-                            Today
-                          </span>
+                <Card key={apt.id} className="p-3 border border-gray-300 shadow-sm bg-white hover:shadow-md transition-shadow">
+                  <div className="flex items-center gap-4">
+                    {/* Time Column */}
+                    <div className="flex-shrink-0 w-20 text-center">
+                      <div className="text-base font-bold text-navy">
+                        {getTimeDisplay(apt.timeSlot)}
+                      </div>
+                    </div>
+
+                    {/* Rep Column */}
+                    <div className="flex-shrink-0 w-32">
+                      <div className="text-xs text-navy/60 mb-0.5">Rep:</div>
+                      <div className="text-base font-bold text-navy truncate">{repName}</div>
+                    </div>
+
+                    {/* Customer Name Column */}
+                    <div className="flex-shrink-0 w-48">
+                      <div className="text-xs text-navy/60 mb-0.5">Customer:</div>
+                      <div className="text-base font-semibold text-navy truncate">{apt.customerName}</div>
+                    </div>
+
+                    {/* Contact Info Column */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-4 text-sm text-navy/70">
+                        {apt.customerPhone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="truncate">{apt.customerPhone}</span>
+                          </div>
+                        )}
+                        {apt.customerEmail && (
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span className="truncate">{apt.customerEmail}</span>
+                          </div>
                         )}
                       </div>
+                    </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 text-sm text-navy/70">
-                            <Calendar className="h-4 w-4" />
-                            <span className="font-medium text-navy">
-                              {format(aptDate, 'EEEE, MMMM d, yyyy')}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-navy/70">
-                            <Clock className="h-4 w-4" />
-                            <span className="font-medium text-navy">{getTimeDisplay(apt.timeSlot)}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-navy/70">
-                            <span className="font-medium text-navy">{repName}</span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          {apt.customerPhone && (
-                            <div className="flex items-center gap-2 text-sm text-navy/70">
-                              <Phone className="h-4 w-4" />
-                              <span>{apt.customerPhone}</span>
-                            </div>
-                          )}
-                          {apt.customerEmail && (
-                            <div className="flex items-center gap-2 text-sm text-navy/70">
-                              <Mail className="h-4 w-4" />
-                              <span>{apt.customerEmail}</span>
-                            </div>
-                          )}
-                          <div className="flex items-start gap-2 text-sm text-navy/70">
-                            <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <span>
-                              {apt.address.street}, {apt.address.city}, {apt.address.state} {apt.address.zip}
-                            </span>
-                          </div>
-                        </div>
+                    {/* Address Column */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-1.5 text-sm text-navy/70">
+                        <MapPin className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+                        <span className="truncate">
+                          {apt.address.street}, {apt.address.city}, {apt.address.state} {apt.address.zip}
+                        </span>
                       </div>
                     </div>
                   </div>

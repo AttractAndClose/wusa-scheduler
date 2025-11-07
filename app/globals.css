@@ -1,3 +1,6 @@
+/* Leaflet map styles - must be imported first */
+@import 'leaflet/dist/leaflet.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,9 +23,6 @@ body {
 .btn-primary {
   @apply bg-primary text-white hover:bg-primary-dark transition-colors;
 }
-
-/* Leaflet map styles */
-@import 'leaflet/dist/leaflet.css';
 
 /* Ensure Leaflet maps stay behind dialogs */
 .leaflet-container {

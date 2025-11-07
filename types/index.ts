@@ -87,5 +87,8 @@ export interface Lead {
   repId?: string; // Optional - assigned rep if lead is converted
   status?: 'new' | 'contacted' | 'qualified' | 'converted';
   createdAt: string;
+  faradayCreditPropensity?: number; // 1-100
+  thinkUnlimitedScore?: 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
+  efScore?: number; // 0, 1, or range 640-800
 }
 

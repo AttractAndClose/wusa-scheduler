@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Calendar, Phone, Mail, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
+import { loadReps, loadAvailability, getAllAppointments, loadLeads } from '@/lib/data-loader';
 import { calculateAvailabilityGrid } from '@/lib/availability';
+import { calculateDistance } from '@/lib/distance';
 import { format, parseISO, startOfWeek, addWeeks, addDays, startOfDay, isBefore } from 'date-fns';
-import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep } from '@/types';
+import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep, Lead } from '@/types';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -25,11 +27,14 @@ function AvailabilityContent() {
   const [reps, setReps] = useState<SalesRep[]>([]);
   const [availability, setAvailability] = useState<Availability>({});
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [addressAvailability, setAddressAvailability] = useState<any[][]>([]);
   const [selectedRepId, setSelectedRepId] = useState<string>('all');
   const [expandedReps, setExpandedReps] = useState<Set<string>>(new Set());
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ rep: SalesRep; date: string; timeSlot: TimeSlot } | null>(null);
+  const [leadsForSlot, setLeadsForSlot] = useState<Array<Lead & { distance: number }>>([]);
 
   // Redirect if not signed in
   useEffect(() => {
@@ -69,14 +74,16 @@ function AvailabilityContent() {
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
-      const [repsData, availabilityData, appointmentsData] = await Promise.all([
+      const [repsData, availabilityData, appointmentsData, leadsData] = await Promise.all([
         loadReps(),
         loadAvailability(),
-        getAllAppointments()
+        getAllAppointments(),
+        loadLeads()
       ]);
       setReps(repsData);
       setAvailability(availabilityData);
       setAppointments(appointmentsData);
+      setLeads(leadsData);
       setIsLoading(false);
     }
     loadData();
@@ -118,6 +125,45 @@ function AvailabilityContent() {
     });
     
     return availableSlots;
+  };
+
+  // Get rep location (home address or last appointment for the date)
+  const getRepLocation = (rep: SalesRep, date: string): [number, number] => {
+    // Find appointments for this rep on this date, sorted by time slot (latest first)
+    const dayAppointments = appointments
+      .filter(apt => apt.repId === rep.id && apt.date === date && apt.status === 'scheduled')
+      .sort((a, b) => {
+        const orderA = a.timeSlot === '10am' ? 1 : a.timeSlot === '2pm' ? 2 : 3;
+        const orderB = b.timeSlot === '10am' ? 1 : b.timeSlot === '2pm' ? 2 : 3;
+        return orderB - orderA; // Latest first
+      });
+
+    if (dayAppointments.length > 0) {
+      // Use last appointment location
+      return [dayAppointments[0].address.lat, dayAppointments[0].address.lng];
+    }
+
+    // No appointments, use home address
+    return [rep.startingAddress.lat, rep.startingAddress.lng];
+  };
+
+  // Handle time slot click - show leads modal
+  const handleTimeSlotClick = (rep: SalesRep, date: string, timeSlot: TimeSlot) => {
+    const repLocation = getRepLocation(rep, date);
+    
+    // Calculate distance for each lead and sort by distance
+    const leadsWithDistance = leads.map(lead => ({
+      ...lead,
+      distance: calculateDistance(
+        repLocation[0],
+        repLocation[1],
+        lead.address.lat,
+        lead.address.lng
+      )
+    })).sort((a, b) => a.distance - b.distance);
+
+    setLeadsForSlot(leadsWithDistance);
+    setSelectedTimeSlot({ rep, date, timeSlot });
   };
 
   const parseAddressFromString = (addressString: string): Address | null => {
@@ -351,14 +397,19 @@ function AvailabilityContent() {
                                     return (
                                       <div
                                         key={slot}
+                                        onClick={() => {
+                                          if (!isPast && isAvailable && !hasAppointment) {
+                                            handleTimeSlotClick(rep, dateString, slot);
+                                          }
+                                        }}
                                         className={`text-xs p-2 rounded text-center ${
                                           isPast
-                                            ? 'bg-gray-200 text-gray-400 opacity-50'
+                                            ? 'bg-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
                                             : hasAppointment
-                                            ? 'bg-orange-100 text-orange-800 font-medium border border-orange-300'
+                                            ? 'bg-orange-100 text-orange-800 font-medium border border-orange-300 cursor-default'
                                             : isAvailable
-                                            ? 'bg-green-100 text-green-800 font-medium border border-green-300'
-                                            : 'bg-gray-100 text-gray-500'
+                                            ? 'bg-green-100 text-green-800 font-medium border border-green-300 cursor-pointer hover:bg-green-200 transition-colors'
+                                            : 'bg-gray-100 text-gray-500 cursor-not-allowed'
                                         }`}
                                       >
                                         {slot === '10am' ? '10:00 AM' :
@@ -435,6 +486,70 @@ function AvailabilityContent() {
             })}
           </div>
         </main>
+
+        {/* Leads Modal */}
+        <Dialog open={!!selectedTimeSlot} onOpenChange={(open) => !open && setSelectedTimeSlot(null)}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Available Leads for {selectedTimeSlot?.rep.name}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedTimeSlot && (
+                  <>
+                    {format(parseISO(selectedTimeSlot.date), 'EEEE, MMMM d, yyyy')} at{' '}
+                    {selectedTimeSlot.timeSlot === '10am' ? '10:00 AM' :
+                     selectedTimeSlot.timeSlot === '2pm' ? '2:00 PM' : '7:00 PM'}
+                    {' '}• Sorted by distance from rep location
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 mt-4">
+              {leadsForSlot.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No leads available
+                </div>
+              ) : (
+                leadsForSlot.map((lead) => (
+                  <div
+                    key={lead.id}
+                    className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-semibold text-navy mb-1">{lead.name}</div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3 w-3" />
+                            {lead.email}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3 w-3" />
+                            {lead.phone}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-3 w-3" />
+                            {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            Status: {lead.status || 'new'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="ml-4 text-right">
+                        <div className="text-lg font-bold text-navy">
+                          {lead.distance.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-gray-500">miles</div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </AppLayout>
     );
   }

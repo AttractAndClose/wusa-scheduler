@@ -9,8 +9,8 @@ import { BookingModal } from '@/components/booking/BookingModal';
 import { CensusStats } from '@/components/booking/CensusStats';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { calculateAvailabilityGrid } from '@/lib/availability';
-import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loader';
-import type { Address, SlotAvailability } from '@/types';
+import { loadReps, loadAvailability, getAllAppointments, loadLeads } from '@/lib/data-loader';
+import type { Address, SlotAvailability, Lead } from '@/types';
 import { addDays } from 'date-fns';
 
 // Dynamically import EnhancedScheduleMap to avoid SSR issues with Leaflet
@@ -21,8 +21,69 @@ const EnhancedScheduleMap = dynamic(() => import('@/components/booking/EnhancedS
   </div>
 });
 
+// Declare Google Maps types
+declare global {
+  interface Window {
+    google: any;
+  }
+}
+
 function HomeContent() {
   const searchParams = useSearchParams();
+  
+  // Parse URL params synchronously on first render to set initial state
+  const parseInitialUrlParams = () => {
+    if (!searchParams) return {};
+    
+    const customerData: {
+      leadId?: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phone?: string;
+      address?: string;
+      faradayCreditPropensity?: string;
+      thinkUnlimitedScore?: string;
+      efScore?: string;
+    } = {};
+
+    const leadId = searchParams.get('leadId');
+    const firstName = searchParams.get('firstName');
+    const lastName = searchParams.get('lastName');
+    const email = searchParams.get('email');
+    const phone = searchParams.get('phone');
+    const faradayCreditPropensity = searchParams.get('faradayCreditPropensity');
+    const thinkUnlimitedScore = searchParams.get('thinkUnlimitedScore');
+    const efScore = searchParams.get('efScore');
+    
+    const addressParam = searchParams.get('address');
+    if (addressParam) {
+      customerData.address = decodeURIComponent(addressParam);
+    } else {
+      const street = searchParams.get('street');
+      const city = searchParams.get('city');
+      const state = searchParams.get('state');
+      const zip = searchParams.get('zip');
+
+      if (street && city && state && zip) {
+        customerData.address = `${decodeURIComponent(street)}, ${decodeURIComponent(city)}, ${state.toUpperCase()} ${zip}`;
+      }
+    }
+
+    if (leadId) customerData.leadId = decodeURIComponent(leadId);
+    if (firstName) customerData.firstName = decodeURIComponent(firstName);
+    if (lastName) customerData.lastName = decodeURIComponent(lastName);
+    if (email) customerData.email = decodeURIComponent(email);
+    if (phone) customerData.phone = decodeURIComponent(phone);
+    if (faradayCreditPropensity) customerData.faradayCreditPropensity = decodeURIComponent(faradayCreditPropensity);
+    if (thinkUnlimitedScore) customerData.thinkUnlimitedScore = decodeURIComponent(thinkUnlimitedScore);
+    if (efScore) customerData.efScore = decodeURIComponent(efScore);
+
+    return customerData;
+  };
+
+  const initialUrlData = parseInitialUrlParams();
+  
   const [customerAddress, setCustomerAddress] = useState<Address | null>(null);
   const [availability, setAvailability] = useState<SlotAvailability[][]>([]);
   const [selectedSlot, setSelectedSlot] = useState<SlotAvailability | null>(null);
@@ -30,7 +91,8 @@ function HomeContent() {
   const [reps, setReps] = useState<any[]>([]);
   const [availabilityData, setAvailabilityData] = useState<any>({});
   const [appointments, setAppointments] = useState<any[]>([]);
-  const [initialAddress, setInitialAddress] = useState<string>('');
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [initialAddress, setInitialAddress] = useState<string>(initialUrlData.address || '');
   const [weekOffset, setWeekOffset] = useState<number>(0); // 0 = current week, 1 = next week, -1 = previous week
   const [customerInfo, setCustomerInfo] = useState<{
     leadId?: string;
@@ -38,7 +100,14 @@ function HomeContent() {
     lastName?: string;
     email?: string;
     phone?: string;
-  }>({});
+  }>({
+    leadId: initialUrlData.leadId,
+    firstName: initialUrlData.firstName,
+    lastName: initialUrlData.lastName,
+    email: initialUrlData.email,
+    phone: initialUrlData.phone,
+  });
+  const [currentLead, setCurrentLead] = useState<Lead | null>(null);
   const [initialCustomerData, setInitialCustomerData] = useState<{
     leadId?: string;
     firstName?: string;
@@ -46,64 +115,42 @@ function HomeContent() {
     email?: string;
     phone?: string;
     address?: string;
-  }>({});
+    faradayCreditPropensity?: string;
+    thinkUnlimitedScore?: string;
+    efScore?: string;
+  }>(initialUrlData);
 
   // Load data on mount
   useEffect(() => {
     async function loadData() {
-      const [repsData, availabilityData, appointmentsData] = await Promise.all([
+      const [repsData, availabilityData, appointmentsData, leadsData] = await Promise.all([
         loadReps(),
         loadAvailability(),
-        getAllAppointments()
+        getAllAppointments(),
+        loadLeads()
       ]);
       setReps(repsData);
       setAvailabilityData(availabilityData);
       setAppointments(appointmentsData);
+      setLeads(leadsData);
     }
     loadData();
   }, []);
+  
+  // Find lead when leadId changes
+  useEffect(() => {
+    if (customerInfo.leadId && leads.length > 0) {
+      const lead = leads.find(l => l.id === customerInfo.leadId);
+      setCurrentLead(lead || null);
+    } else {
+      setCurrentLead(null);
+    }
+  }, [customerInfo.leadId, leads]);
 
   // Check for customer info in URL parameters (for Salesforce integration)
   useEffect(() => {
     if (searchParams) {
-      const customerData: {
-        leadId?: string;
-        firstName?: string;
-        lastName?: string;
-        email?: string;
-        phone?: string;
-        address?: string;
-      } = {};
-
-      // Get all customer info fields
-      const leadId = searchParams.get('leadId');
-      const firstName = searchParams.get('firstName');
-      const lastName = searchParams.get('lastName');
-      const email = searchParams.get('email');
-      const phone = searchParams.get('phone');
-      
-      // Check for full address string
-      const addressParam = searchParams.get('address');
-      if (addressParam) {
-        customerData.address = decodeURIComponent(addressParam);
-      } else {
-        // Check for individual address components
-        const street = searchParams.get('street');
-        const city = searchParams.get('city');
-        const state = searchParams.get('state');
-        const zip = searchParams.get('zip');
-
-        if (street && city && state && zip) {
-          customerData.address = `${decodeURIComponent(street)}, ${decodeURIComponent(city)}, ${state.toUpperCase()} ${zip}`;
-        }
-      }
-
-      if (leadId) customerData.leadId = decodeURIComponent(leadId);
-      if (firstName) customerData.firstName = decodeURIComponent(firstName);
-      if (lastName) customerData.lastName = decodeURIComponent(lastName);
-      if (email) customerData.email = decodeURIComponent(email);
-      if (phone) customerData.phone = decodeURIComponent(phone);
-
+      const customerData = parseInitialUrlParams();
       if (Object.keys(customerData).length > 0) {
         setInitialCustomerData(customerData);
         setCustomerInfo({
@@ -244,6 +291,7 @@ function HomeContent() {
     }
   };
 
+
   return (
     <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -258,7 +306,34 @@ function HomeContent() {
               isLoading={isLoading}
               initialData={initialCustomerData}
               onCustomerInfoChange={setCustomerInfo}
+              isReadOnly={Object.keys(initialCustomerData).length > 0}
             />
+            {/* Lead Scores */}
+            {(initialCustomerData.faradayCreditPropensity || initialCustomerData.thinkUnlimitedScore || initialCustomerData.efScore) && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Lead Scores</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {initialCustomerData.faradayCreditPropensity && (
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Faraday Credit Propensity</div>
+                      <div className="text-lg font-semibold text-gray-900">{initialCustomerData.faradayCreditPropensity}/100</div>
+                    </div>
+                  )}
+                  {initialCustomerData.thinkUnlimitedScore && (
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Think Unlimited Score</div>
+                      <div className="text-lg font-semibold text-gray-900">{initialCustomerData.thinkUnlimitedScore}</div>
+                    </div>
+                  )}
+                  {initialCustomerData.efScore && (
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">EF Score</div>
+                      <div className="text-lg font-semibold text-gray-900">{initialCustomerData.efScore}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Availability Grid */}

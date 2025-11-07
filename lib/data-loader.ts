@@ -121,12 +121,29 @@ export async function loadLeads(): Promise<Lead[]> {
   }
   
   try {
-    const response = await fetch('/data/leads.json');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    const response = await fetch('/data/leads.json', {
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to load leads: ${response.status}`);
+    }
+    
     const data = await response.json();
     cachedLeads = data;
+    console.log(`Loaded ${data.length} leads`);
     return data;
   } catch (error) {
-    console.error('Error loading leads:', error);
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.error('Timeout loading leads - file may be too large');
+    } else {
+      console.error('Error loading leads:', error);
+    }
     return [];
   }
 }

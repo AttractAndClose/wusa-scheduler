@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { getAllServiceableZips, saveServiceableZips } from '@/lib/serviceable-zips';
+import { getAllServiceableZips } from '@/lib/serviceable-zips';
 import type { ServiceableZip } from '@/types/serviceable-zips';
 
 // Force dynamic rendering
@@ -19,10 +19,11 @@ function ServiceableZipsContent() {
   const { isLoaded, isSignedIn } = useUser();
   const searchParams = useSearchParams();
   const [zips, setZips] = useState<ServiceableZip[]>([]);
-  const [filteredZips, setFilteredZips] = useState<ServiceableZip[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [stateFilter, setStateFilter] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
 
   // Redirect if not signed in
   useEffect(() => {
@@ -39,7 +40,6 @@ function ServiceableZipsContent() {
         const data = await getAllServiceableZips();
         console.log('Loaded zip codes:', data.length);
         setZips(data);
-        setFilteredZips(data);
       } catch (error) {
         console.error('Error loading zip codes:', error);
       } finally {
@@ -49,8 +49,8 @@ function ServiceableZipsContent() {
     loadZips();
   }, []);
 
-  // Filter zip codes
-  useEffect(() => {
+  // Filter and paginate zip codes
+  const filteredZips = useMemo(() => {
     let filtered = [...zips];
 
     if (searchTerm) {
@@ -68,36 +68,19 @@ function ServiceableZipsContent() {
       filtered = filtered.filter(z => z.state === stateFilter);
     }
 
-    setFilteredZips(filtered);
+    return filtered;
   }, [searchTerm, stateFilter, zips]);
 
-  const handleExcludedChange = (zip: string, excluded: boolean) => {
-    const updatedZips = zips.map(z =>
-      z.zip === zip ? { ...z, excluded } : z
-    );
-    setZips(updatedZips);
-    setFilteredZips(updatedZips.filter(z => {
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
-        return z.zip.toLowerCase().includes(term) ||
-          z.county.toLowerCase().includes(term) ||
-          z.state.toLowerCase().includes(term) ||
-          z.stateName.toLowerCase().includes(term);
-      }
-      return true;
-    }).filter(z => stateFilter ? z.state === stateFilter : true));
-    // Auto-save
-    saveServiceableZips(updatedZips);
-  };
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredZips.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedZips = filteredZips.slice(startIndex, endIndex);
 
-  const handleNotesChange = (zip: string, notes: string) => {
-    const updatedZips = zips.map(z =>
-      z.zip === zip ? { ...z, notes } : z
-    );
-    setZips(updatedZips);
-    // Auto-save
-    saveServiceableZips(updatedZips);
-  };
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, stateFilter]);
 
   const states = ['AL', 'AR', 'GA', 'IL', 'KS', 'KY', 'LA', 'MS', 'MO', 'NC', 'OK', 'SC', 'TN', 'TX'];
   const stateNames: Record<string, string> = {
@@ -179,49 +162,73 @@ function ServiceableZipsContent() {
             <table className="w-full">
               <thead className="bg-navy text-white">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Exclude</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">State</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Zip Code</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">County</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium">Excluded</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium">State</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium">Zip Code</th>
+                  <th className="px-4 py-3 text-center text-sm font-medium">County</th>
                   <th className="px-4 py-3 text-left text-sm font-medium">Notes</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredZips.map((zip) => (
+                {paginatedZips.map((zip) => (
                   <tr
                     key={zip.zip}
                     className={zip.excluded ? 'bg-red-50' : 'bg-white hover:bg-gray-50'}
                   >
-                    <td className="px-4 py-3">
-                      <Checkbox
-                        checked={zip.excluded}
-                        onCheckedChange={(checked) => handleExcludedChange(zip.zip, checked === true)}
-                        className="border-gray-300"
-                      />
+                    <td className="px-4 py-3 text-center text-sm text-navy">
+                      {zip.excluded ? 'Yes' : 'No'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-navy font-medium">
+                    <td className="px-4 py-3 text-center text-sm text-navy font-medium">
                       {zip.stateName} ({zip.state})
                     </td>
-                    <td className="px-4 py-3 text-sm text-navy font-mono">
+                    <td className="px-4 py-3 text-center text-sm text-navy font-mono">
                       {zip.zip}
                     </td>
-                    <td className="px-4 py-3 text-sm text-navy/70">
+                    <td className="px-4 py-3 text-center text-sm text-navy/70">
                       {zip.county}
                     </td>
-                    <td className="px-4 py-3">
-                      <Input
-                        type="text"
-                        placeholder="Add notes..."
-                        value={zip.notes}
-                        onChange={(e) => handleNotesChange(zip.zip, e.target.value)}
-                        className="border-gray-300 focus:border-primary focus:ring-primary text-sm"
-                      />
+                    <td className="px-4 py-3 text-sm text-navy/70">
+                      {zip.notes || '-'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="px-4 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+              <div className="text-sm text-navy/70">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredZips.length)} of {filteredZips.length} zip codes
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+                <div className="text-sm text-navy/70 px-3">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </main>
     </AppLayout>

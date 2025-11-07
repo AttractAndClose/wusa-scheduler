@@ -190,6 +190,20 @@ function generateLeadsForRep(rep, numLeads = 100) {
     const state = repState;
     const zip = rep.startingAddress.zip; // Keep same zip for simplicity
     
+    // Generate scores
+    const faradayCreditPropensity = Math.floor(Math.random() * 100) + 1; // 1-100
+    const thinkUnlimitedScores = ['Platinum', 'Gold', 'Silver', 'Bronze'];
+    const thinkUnlimitedScore = thinkUnlimitedScores[Math.floor(Math.random() * thinkUnlimitedScores.length)];
+    
+    // EF Score: 0, 1, or range 640-800
+    // 30% chance of 0 or 1, 70% chance of 640-800
+    let efScore;
+    if (Math.random() < 0.3) {
+      efScore = Math.random() < 0.5 ? 0 : 1;
+    } else {
+      efScore = Math.floor(Math.random() * (800 - 640 + 1)) + 640; // 640-800
+    }
+    
     const lead = {
       id: `lead-${rep.id}-${i + 1}`,
       name: name,
@@ -204,7 +218,10 @@ function generateLeadsForRep(rep, numLeads = 100) {
         lng: parseFloat(coords.lng.toFixed(6))
       },
       status: 'new',
-      createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString()
+      createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
+      faradayCreditPropensity: faradayCreditPropensity,
+      thinkUnlimitedScore: thinkUnlimitedScore,
+      efScore: efScore
     };
     
     leads.push(lead);
