@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
 import { Users, DollarSign, GraduationCap, Home, TrendingUp, Key, Baby, Calendar, Building2, Clock, TrendingDown } from 'lucide-react';
 import type { Address } from '@/types';
 
@@ -254,7 +253,7 @@ export function CensusStats({ address }: CensusStatsProps) {
 
   if (isLoading) {
     return (
-      <Card className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+      <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
         <h2 className="text-xl font-semibold text-navy mb-4">
           ZIP Code Demographics
         </h2>
@@ -262,20 +261,20 @@ export function CensusStats({ address }: CensusStatsProps) {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           <p className="mt-4 text-navy text-sm">Loading census data...</p>
         </div>
-      </Card>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+      <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
         <h2 className="text-xl font-semibold text-navy mb-4">
           ZIP Code Demographics
         </h2>
         <div className="text-center py-4">
           <p className="text-navy/70 text-sm">{error}</p>
         </div>
-      </Card>
+      </div>
     );
   }
 
@@ -306,7 +305,7 @@ export function CensusStats({ address }: CensusStatsProps) {
   };
 
   return (
-    <Card className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+    <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
       <h2 className="text-xl font-semibold text-navy mb-4">
         ZIP Code Demographics ({address.zip.substring(0, 5)})
       </h2>
@@ -527,7 +526,7 @@ export function CensusStats({ address }: CensusStatsProps) {
       <p className="mt-4 text-xs text-navy/50">
         Data from U.S. Census Bureau {CENSUS_YEAR} ACS 5-Year Estimates
       </p>
-    </Card>
+    </div>
   );
 }
 

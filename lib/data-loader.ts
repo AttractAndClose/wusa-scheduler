@@ -1,4 +1,4 @@
-import type { SalesRep, Appointment, Availability } from '@/types';
+import type { SalesRep, Appointment, Availability, Lead } from '@/types';
 
 /**
  * Load data from JSON files
@@ -8,6 +8,7 @@ import type { SalesRep, Appointment, Availability } from '@/types';
 let cachedReps: SalesRep[] | null = null;
 let cachedAvailability: Availability | null = null;
 let cachedAppointments: Appointment[] | null = null;
+let cachedLeads: Lead[] | null = null;
 
 // Function to clear appointments cache (useful for development)
 export function clearAppointmentsCache(): void {
@@ -112,5 +113,21 @@ export async function getAllAppointments(): Promise<Appointment[]> {
   );
   
   return uniqueAppointments;
+}
+
+export async function loadLeads(): Promise<Lead[]> {
+  if (cachedLeads) {
+    return cachedLeads;
+  }
+  
+  try {
+    const response = await fetch('/data/leads.json');
+    const data = await response.json();
+    cachedLeads = data;
+    return data;
+  } catch (error) {
+    console.error('Error loading leads:', error);
+    return [];
+  }
 }
 

@@ -8,10 +8,10 @@ import { cn } from '@/lib/utils';
 
 const navigation = [
   { name: 'Schedule', href: '/', icon: Calendar },
+  { name: 'Map', href: '/map', icon: MapPin },
   { name: 'Rep Availability', href: '/availability', icon: Users },
   { name: 'Scheduled Appointments', href: '/appointments', icon: Clock },
   { name: 'Serviceable Zip Codes', href: '/serviceable-zips', icon: FileText },
-  { name: 'View Map', href: '/map', icon: MapPin },
 ];
 
 export function Sidebar() {

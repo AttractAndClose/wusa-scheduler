@@ -13,10 +13,10 @@ import { loadReps, loadAvailability, getAllAppointments } from '@/lib/data-loade
 import type { Address, SlotAvailability } from '@/types';
 import { addDays } from 'date-fns';
 
-// Dynamically import AddressMap to avoid SSR issues with Leaflet
-const AddressMap = dynamic(() => import('@/components/booking/AddressMap').then(mod => ({ default: mod.AddressMap })), {
+// Dynamically import EnhancedScheduleMap to avoid SSR issues with Leaflet
+const EnhancedScheduleMap = dynamic(() => import('@/components/booking/EnhancedScheduleMap').then(mod => ({ default: mod.EnhancedScheduleMap })), {
   ssr: false,
-  loading: () => <div className="h-[400px] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
+  loading: () => <div className="h-[500px] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
     <div className="text-navy">Loading map...</div>
   </div>
 });
@@ -247,7 +247,7 @@ function HomeContent() {
   return (
     <AppLayout>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="space-y-8">
           {/* Customer Info Section */}
           <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
             <h2 className="text-xl font-semibold text-navy mb-4">
@@ -261,55 +261,61 @@ function HomeContent() {
             />
           </div>
 
-          {/* Availability Grid and Map */}
+          {/* Availability Grid */}
           {customerAddress && (
-            <>
-              {/* Availability Grid */}
-              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-                {isLoading ? (
-                  <div className="text-center py-12">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                    <p className="mt-4 text-navy">Calculating availability...</p>
-                  </div>
-                ) : (
-                  <AvailabilityGrid
-                    availability={availability}
-                    onSlotSelect={handleSlotSelect}
-                    onWeekChange={handleWeekChange}
-                    weekOffset={weekOffset}
-                  />
-                )}
-              </div>
-
-              {/* Map Section */}
-              <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-                <h2 className="text-xl font-semibold text-navy mb-4">
-                  Customer Location
-                </h2>
-                <div className="mb-2 text-sm text-navy/70">
-                  <p className="font-medium">{customerAddress.street}</p>
-                  <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
+            <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                  <p className="mt-4 text-navy">Calculating availability...</p>
                 </div>
-                <AddressMap address={customerAddress} />
-              </div>
-
-              {/* Census Stats Section */}
-              <CensusStats address={customerAddress} />
-            </>
+              ) : (
+                <AvailabilityGrid
+                  availability={availability}
+                  onSlotSelect={handleSlotSelect}
+                  onWeekChange={handleWeekChange}
+                  weekOffset={weekOffset}
+                />
+              )}
+            </div>
           )}
 
-          {/* Booking Modal */}
-          {selectedSlot && customerAddress && (
-            <BookingModal
-              slot={selectedSlot}
-              customerAddress={customerAddress}
-              customerInfo={customerInfo}
-              onClose={() => setSelectedSlot(null)}
-              onConfirm={handleBookingConfirm}
-              onRefresh={handleRefresh}
-            />
+          {/* Map Section */}
+          {customerAddress && (
+            <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
+              <h2 className="text-xl font-semibold text-navy mb-4">
+                Appointment Map
+              </h2>
+              <div className="mb-4 text-sm text-navy/70">
+                <p className="font-medium">{customerAddress.street}</p>
+                <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
+              </div>
+              <EnhancedScheduleMap
+                customerAddress={customerAddress}
+                appointments={appointments}
+                reps={reps}
+                availability={availabilityData}
+              />
+            </div>
+          )}
+
+          {/* Census Stats Section */}
+          {customerAddress && (
+            <CensusStats address={customerAddress} />
           )}
         </div>
+
+        {/* Booking Modal */}
+        {selectedSlot && customerAddress && (
+          <BookingModal
+            slot={selectedSlot}
+            customerAddress={customerAddress}
+            customerInfo={customerInfo}
+            onClose={() => setSelectedSlot(null)}
+            onConfirm={handleBookingConfirm}
+            onRefresh={handleRefresh}
+          />
+        )}
       </main>
     </AppLayout>
   );

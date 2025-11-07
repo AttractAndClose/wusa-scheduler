@@ -16,6 +16,7 @@ export interface SalesRep {
   phone: string;
   startingAddress: Address;
   color: string; // For map visualization
+  successScore?: number; // Success score from 1-100
 }
 
 export interface Availability {
@@ -75,5 +76,16 @@ export interface ZipCode {
   state: string;
   lat: number;
   lng: number;
+}
+
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: Address;
+  repId?: string; // Optional - assigned rep if lead is converted
+  status?: 'new' | 'contacted' | 'qualified' | 'converted';
+  createdAt: string;
 }
 

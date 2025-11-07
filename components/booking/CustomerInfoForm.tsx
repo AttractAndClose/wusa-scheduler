@@ -607,7 +607,8 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+      {/* Row 1: Lead ID, First Name, Last Name */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="leadId" className="text-navy">
             Lead ID
@@ -634,9 +635,6 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
         <div>
           <Label htmlFor="lastName" className="text-navy">
             Last Name
@@ -650,9 +648,26 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
+      </div>
+
+      {/* Row 2: Phone, Email Address, Address */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="phone" className="text-navy">
+            Phone
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            disabled={isLoading}
+            className="border-gray-300 focus:border-primary focus:ring-primary"
+          />
+        </div>
         <div>
           <Label htmlFor="email" className="text-navy">
-            Email
+            Email Address
           </Label>
           <Input
             id="email"
@@ -663,60 +678,45 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             className="border-gray-300 focus:border-primary focus:ring-primary"
           />
         </div>
-      </div>
-
-      <div>
-        <Label htmlFor="phone" className="text-navy">
-          Phone
-        </Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          disabled={isLoading}
-          className="border-gray-300 focus:border-primary focus:ring-primary"
-        />
-      </div>
-
-      <div className="relative">
-        <Label htmlFor="address" className="text-navy">
-          Address
-        </Label>
-        <Input
-          ref={autocompleteRef}
-          id="address"
-          type="text"
-          placeholder="Enter or paste full address (e.g., 123 Main St, Phoenix, AZ 85001)"
-          value={addressInput}
-          onChange={(e) => handleAddressChange(e.target.value)}
-          disabled={isLoading}
-          required
-          className="border-gray-300 focus:border-primary focus:ring-primary text-base"
-          autoComplete="off"
-        />
-        {showSuggestions && addressSuggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-            {addressSuggestions.map((suggestion, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => selectSuggestion(suggestion)}
-                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-navy"
-              >
-                {suggestion.description || suggestion.formatted_address}
-              </button>
-            ))}
-          </div>
-        )}
-        <p className="mt-1 text-xs text-navy/60">
-          Start typing to see address suggestions, or paste a full address
-        </p>
-        {addressError && (
-          <div className="mt-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
-            {addressError}
-          </div>
-        )}
+        <div className="relative">
+          <Label htmlFor="address" className="text-navy">
+            Address
+          </Label>
+          <Input
+            ref={autocompleteRef}
+            id="address"
+            type="text"
+            placeholder="Enter or paste full address (e.g., 123 Main St, Phoenix, AZ 85001)"
+            value={addressInput}
+            onChange={(e) => handleAddressChange(e.target.value)}
+            disabled={isLoading}
+            required
+            className="border-gray-300 focus:border-primary focus:ring-primary text-base"
+            autoComplete="off"
+          />
+          {showSuggestions && addressSuggestions.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+              {addressSuggestions.map((suggestion, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => selectSuggestion(suggestion)}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm text-navy"
+                >
+                  {suggestion.description || suggestion.formatted_address}
+                </button>
+              ))}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-navy/60">
+            Start typing to see address suggestions, or paste a full address
+          </p>
+          {addressError && (
+            <div className="mt-2 bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-700">
+              {addressError}
+            </div>
+          )}
+        </div>
       </div>
       
       <Button type="submit" disabled={isLoading} className="w-full bg-primary hover:bg-primary-dark text-white">
