@@ -27,6 +27,7 @@ import {
   BarChart3,
   Target
 } from 'lucide-react';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -391,8 +392,8 @@ function DashboardContent() {
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Leads */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Total Leads</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.totalLeads.toLocaleString()}</p>
@@ -402,19 +403,21 @@ function DashboardContent() {
             </Card>
 
             {/* Scheduled Appointments */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-navy/70">Scheduled Appointments</p>
-                  <p className="text-3xl font-bold text-navy mt-2">{metrics.scheduledAppointments.toLocaleString()}</p>
+            <Link href="/appointments" className="h-full">
+              <Card className="p-6 bg-white hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div>
+                    <p className="text-sm text-navy/70">Scheduled Appointments</p>
+                    <p className="text-3xl font-bold text-navy mt-2">{metrics.scheduledAppointments.toLocaleString()}</p>
+                  </div>
+                  <Calendar className="h-8 w-8 text-primary" />
                 </div>
-                <Calendar className="h-8 w-8 text-primary" />
-              </div>
-            </Card>
+              </Card>
+            </Link>
 
             {/* Available Appointments */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Available Appointments</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.availableAppointments.toLocaleString()}</p>
@@ -424,8 +427,8 @@ function DashboardContent() {
             </Card>
 
             {/* Fulfilment Rate */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Fulfillment %</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.fulfilmentRate.toFixed(1)}%</p>
@@ -438,19 +441,21 @@ function DashboardContent() {
           {/* Secondary Metrics Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Mileage Issues */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-navy/70">Mileage Issues (≥60mi)</p>
-                  <p className="text-3xl font-bold text-red-600 mt-2">{metrics.appointmentsWithMileageIssues.toLocaleString()}</p>
+            <Link href="/appointments?mileageIssues=true" className="h-full">
+              <Card className="p-6 bg-white hover:shadow-lg transition-shadow cursor-pointer h-full">
+                <div className="flex items-center justify-between h-full">
+                  <div>
+                    <p className="text-sm text-navy/70">Mileage Issues (≥60mi)</p>
+                    <p className="text-3xl font-bold text-red-600 mt-2">{metrics.appointmentsWithMileageIssues.toLocaleString()}</p>
+                  </div>
+                  <AlertTriangle className="h-8 w-8 text-red-600" />
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-600" />
-              </div>
-            </Card>
+              </Card>
+            </Link>
 
             {/* Total Reps */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Total Reps</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.totalReps.toLocaleString()}</p>
@@ -461,8 +466,8 @@ function DashboardContent() {
             </Card>
 
             {/* Covered Zip Codes */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Covered Zip Codes</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.coveredZipCodesCount.toLocaleString()}</p>
@@ -472,8 +477,8 @@ function DashboardContent() {
             </Card>
 
             {/* Conversion Rate */}
-            <Card className="p-6 bg-white">
-              <div className="flex items-center justify-between">
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
                 <div>
                   <p className="text-sm text-navy/70">Lead Conversion Rate</p>
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.conversionRate.toFixed(1)}%</p>

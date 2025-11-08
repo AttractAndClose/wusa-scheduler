@@ -35,8 +35,8 @@ export default function RootLayout({
       publishableKey={publishableKey}
       signUpUrl={undefined}
       signInUrl="/sign-in"
-      afterSignInUrl="/"
-      afterSignOutUrl="/"
+      afterSignInUrl="/dashboard"
+      afterSignOutUrl="/sign-in"
     >
       <html lang="en" suppressHydrationWarning>
         <head>

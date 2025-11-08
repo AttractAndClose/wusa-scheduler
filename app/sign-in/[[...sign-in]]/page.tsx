@@ -22,6 +22,8 @@ export default function SignInPage() {
           routing="path"
           path="/sign-in"
           signUpUrl={undefined}
+          fallbackRedirectUrl="/dashboard"
+          forceRedirectUrl="/dashboard"
           appearance={{
             elements: {
               rootBox: 'mx-auto',

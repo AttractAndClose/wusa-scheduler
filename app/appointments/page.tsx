@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useMemo } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic';
 function AppointmentsContent() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [reps, setReps] = useState<any[]>([]);
   const [selectedRepId, setSelectedRepId] = useState<string>('all');
@@ -26,6 +27,14 @@ function AppointmentsContent() {
   const [dayOffset, setDayOffset] = useState<number | 'all'>(0); // 'all' = all appointments, 0 = today, 1 = tomorrow, etc.
   const [showMileageIssuesOnly, setShowMileageIssuesOnly] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Check URL parameter for mileage issues filter
+  useEffect(() => {
+    const mileageIssuesParam = searchParams.get('mileageIssues');
+    if (mileageIssuesParam === 'true') {
+      setShowMileageIssuesOnly(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isLoaded) return;

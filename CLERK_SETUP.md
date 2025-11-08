@@ -37,11 +37,35 @@ In Clerk Dashboard → Settings:
 
 **Users must be created manually via Clerk Dashboard:**
 
-1. Go to https://dashboard.clerk.com → Your App → Users
-2. Click **Create User**
-3. Email: `danny@attractandclose.com`
-4. Password: `123456`
-5. Click **Create**
+### Step-by-Step Instructions:
+
+1. Go to https://dashboard.clerk.com
+2. Select your application
+3. Click **Users** in the left sidebar
+4. Click the **+ Create User** button (top right)
+5. In the "Create User" modal/form, you should see:
+   - **Email address** field (required) - Enter the user's email
+   - **Password** field (required) - Set a password
+   - **First name** (optional)
+   - **Last name** (optional)
+6. Fill in the email and password
+7. Click **Create** or **Save**
+
+### If Email Field is Missing:
+
+**Make sure Email/Password authentication is enabled:**
+1. Go to **Settings** → **User & Authentication**
+2. Under **Authentication Methods**, ensure **Email** is enabled
+3. If it's not enabled, toggle it on and save
+4. Then try creating the user again
+
+### Adding Email to Existing User:
+
+If you already created a user without an email:
+1. Go to **Users** → Click on the user
+2. Click **Edit** or the pencil icon
+3. Add the email address in the email field
+4. Save changes
 
 **Note:** Sign-up is disabled. All users must be created by admins through the Clerk dashboard.
 

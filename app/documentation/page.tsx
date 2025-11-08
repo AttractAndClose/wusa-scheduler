@@ -102,8 +102,11 @@ function DocumentationMarkdown() {
           <li>Interactive map visualization with Leaflet.js</li>
           <li>Rep availability management interface</li>
           <li>Serviceable zip code management</li>
-          <li>Lead demographics and filtering</li>
+          <li>Lead demographics and filtering with lead source tracking</li>
+          <li>Referral lead management with referrer information</li>
           <li>Admin-only settings and configuration</li>
+          <li>Dashboard with comprehensive metrics and analytics</li>
+          <li>Interactive referral map with advanced filtering</li>
         </ul>
       </section>
 
@@ -126,6 +129,7 @@ function DocumentationMarkdown() {
           <li><strong>Lucide React</strong> - Icon library with 1000+ icons</li>
           <li><strong>class-variance-authority</strong> - For component variant management</li>
           <li><strong>clsx & tailwind-merge</strong> - Utility functions for conditional class names</li>
+          <li><strong>Global CSS Styling</strong> - Custom CSS in globals.css for map grayscale filter and other global styles</li>
         </ul>
 
         <h3 className="text-xl font-semibold text-navy mt-6 mb-3">Maps & Geocoding</h3>
@@ -168,7 +172,9 @@ function DocumentationMarkdown() {
 │   │   └── page.tsx
 │   ├── availability/            # Rep availability management
 │   │   └── page.tsx
-│   ├── map/                     # Geographic visualization
+│   ├── dashboard/               # Dashboard with metrics (admin only)
+│   │   └── page.tsx
+│   ├── map/                     # Referral map visualization
 │   │   └── page.tsx
 │   ├── serviceable-zips/        # Zip code management
 │   │   └── page.tsx
@@ -358,6 +364,13 @@ type TimeSlot = '10am' | '2pm' | '7pm';`}
   faradayCreditPropensity?: number;  // 1-100 credit score
   thinkUnlimitedScore?: 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
   efScore?: number;               // 0, 1, or range 640-800
+  leadSource?: 'Referral' | 'Affiliate';
+  leadSourceDetails?: string;     // Specific source (e.g., 'ReferralBD', 'My Home Pros')
+  // Referral-specific fields
+  refererName?: string;           // Name of person who referred
+  refererPhone?: string;          // Referrer phone number
+  refererAddress?: Address;        // Referrer address
+  refererRelationship?: 'Friend' | 'Family';
 }`}
           </pre>
         </div>
@@ -409,19 +422,28 @@ interface AnchorPoint {
           <li><strong>Census Statistics:</strong> Displays demographic data for customer&apos;s zip code</li>
         </ul>
 
-        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.2 Map Page (/map)</h3>
+        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.2 Referral Map Page (/map)</h3>
         <p className="mb-4">
-          Geographic visualization of sales coverage, appointments, and leads. Features include:
+          Geographic visualization of referral leads, appointments, and rep coverage. Features include:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
+          <li><strong>Referral Leads Only:</strong> Only displays leads with leadSource = &quot;Referral&quot;</li>
+          <li><strong>Grayscale Map:</strong> Map tiles are displayed in grayscale for better visual focus on markers</li>
           <li><strong>Date/Time Selection:</strong> Filter map view by specific date and time slot</li>
-          <li><strong>Rep Visualization:</strong> Shows all sales reps with color-coded markers</li>
-          <li><strong>Service Radii:</strong> 60-mile drive radius circles around each rep</li>
-          <li><strong>Appointment Markers:</strong> Displays scheduled appointments on the map</li>
-          <li><strong>Lead Filtering:</strong> Filter leads by EF score (640+, 1, 0) and creation date</li>
-          <li><strong>Admin vs Member Views:</strong> Admins see all leads; members see filtered view based on settings</li>
-          <li><strong>Lead Details:</strong> Click on lead markers to see customer information and scores</li>
-          <li><strong>Address Search:</strong> Optional customer address input to see coverage for specific location</li>
+          <li><strong>Rep Visualization:</strong> Shows all sales reps with color-coded markers (blue pins, red when selected)</li>
+          <li><strong>Dynamic Rep Pin Sizing:</strong> Rep pins scale based on zoom level (larger when zoomed in)</li>
+          <li><strong>Service Radii:</strong> 45-mile radius circle for selected rep (semi-transparent)</li>
+          <li><strong>Appointment Markers:</strong> Displays scheduled appointments on the map (green circles)</li>
+          <li><strong>Lead Source Details Filtering:</strong> Filter by Referral Lead Source Details (ReferralBD, ReferralEX, etc.)</li>
+          <li><strong>EF Score Filtering:</strong> Filter leads by EF score (640+, 1, 0) and creation date</li>
+          <li><strong>Admin vs Member Views:</strong> Admins see all leads; members see filtered view based on admin settings</li>
+          <li><strong>Lead Popup:</strong> Two-column popup showing customer info (left) and referrer info (right) with red labels</li>
+          <li><strong>Lead Sorting:</strong> Sort available leads by distance, Faraday Credit, Think Unlimited, or EF Score</li>
+          <li><strong>Legend Toggles:</strong> Checkboxes to show/hide reps, appointments, and referral source details</li>
+          <li><strong>Admin Controls:</strong> Update Member Filters button to save current filter settings as defaults for members</li>
+          <li><strong>Reset Map:</strong> Button to clear selected rep and reset map view</li>
+          <li><strong>Rep Sidebar:</strong> Shows reps with availability for selected day, with lead scheduling capabilities</li>
+          <li><strong>Salesforce Lead Button:</strong> Placeholder button for opening Salesforce lead records</li>
         </ul>
 
         <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.3 Rep Availability Page (/availability)</h3>
@@ -441,11 +463,16 @@ interface AnchorPoint {
           List view of all scheduled appointments. Features include:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
-          <li><strong>Appointment List:</strong> Chronological list of all appointments</li>
+          <li><strong>Appointment List:</strong> Chronological list of all appointments grouped by rep</li>
+          <li><strong>Rep Headers:</strong> Red background headers showing rep name and last location address</li>
+          <li><strong>Mileage Issues Filter:</strong> Checkbox to show only appointments with 60+ miles distance</li>
+          <li><strong>URL Parameter Support:</strong> Accepts ?mileageIssues=true to auto-enable mileage filter</li>
           <li><strong>Status Filtering:</strong> Filter by status (scheduled/completed/cancelled)</li>
           <li><strong>Rep Assignment:</strong> See which rep is assigned to each appointment</li>
-          <li><strong>Customer Information:</strong> View customer details and address</li>
-          <li><strong>Date Navigation:</strong> Filter appointments by date range</li>
+          <li><strong>Customer Information:</strong> View customer details, address, and contact info</li>
+          <li><strong>Distance Display:</strong> Shows distance from previous location with color coding (red for 60+ miles)</li>
+          <li><strong>Date Navigation:</strong> Filter appointments by date range with day offset controls</li>
+          <li><strong>State Filtering:</strong> Filter appointments by state</li>
         </ul>
 
         <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.5 Serviceable Zip Codes Page (/serviceable-zips)</h3>
@@ -465,19 +492,43 @@ interface AnchorPoint {
           View census demographic data for zip codes. Features include:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
-          <li><strong>Demographic Data:</strong> Census statistics for zip codes</li>
-          <li><strong>Search:</strong> Search by zip code to view demographics</li>
+          <li><strong>Always Visible:</strong> Content blocks are always displayed, even without a zip code</li>
+          <li><strong>Placeholder Display:</strong> Shows blue hyphen (—) when data is not available</li>
+          <li><strong>Integrated Search:</strong> Zip code input and search button are in the same container as data fields</li>
+          <li><strong>Top Right Positioning:</strong> Search controls positioned at top right with smaller width</li>
+          <li><strong>Demographic Data:</strong> Census statistics for zip codes (population, income, housing, etc.)</li>
           <li><strong>Data Display:</strong> Population, income, housing, and other census variables</li>
         </ul>
 
-        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.7 Settings Page (/settings) - Admin Only</h3>
+        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.7 Dashboard Page (/dashboard) - Admin Only</h3>
+        <p className="mb-4">
+          Comprehensive dashboard with key metrics and analytics. Features include:
+        </p>
+        <ul className="list-disc pl-6 space-y-2 mb-4">
+          <li><strong>Date Range Filter:</strong> Dropdown with presets (Today, Tomorrow, Next 7/14/30/60/90 Days, This/Next Week/Month)</li>
+          <li><strong>Key Metrics:</strong> Total Leads, Scheduled Appointments, Available Appointments, Fulfillment %</li>
+          <li><strong>Secondary Metrics:</strong> Mileage Issues, Total Reps, Covered Zip Codes, Lead Conversion Rate</li>
+          <li><strong>Total Leads Calculation:</strong> Counts all leads that haven&apos;t set an appointment (not filtered by date)</li>
+          <li><strong>Covered Zip Codes:</strong> Counts zip codes where a rep can cover within 60 miles of their home address</li>
+          <li><strong>Fulfillment %:</strong> Calculated as booked appointments vs available appointments from rep availability</li>
+          <li><strong>Mileage Issues:</strong> Counts appointments with 60+ miles distance between locations</li>
+          <li><strong>Clickable Cards:</strong> Scheduled Appointments and Mileage Issues cards link to appointments page</li>
+          <li><strong>Mileage Issues Link:</strong> Links to /appointments?mileageIssues=true to auto-enable filter</li>
+          <li><strong>Detailed Breakdowns:</strong> Appointments by time slot, leads by status, appointment status breakdown</li>
+          <li><strong>Additional Statistics:</strong> Average distance, average appointments per rep</li>
+          <li><strong>White Background:</strong> All content blocks have white backgrounds (standard styling)</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">5.8 Settings Page (/settings) - Admin Only</h3>
         <p className="mb-4">
           Administrative settings for configuring application defaults. Features include:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
           <li><strong>Map Visibility Settings:</strong> Configure default lead filters for non-admin users</li>
-          <li><strong>EF Score Filters:</strong> Set default EF score filters (640+, 1, 0)</li>
-          <li><strong>Days Ago Filter:</strong> Set default date range for lead filtering</li>
+          <li><strong>EF Score Filters:</strong> Set default EF score filters (640+, 1, 0) - multi-select with &quot;All&quot; option</li>
+          <li><strong>Referral Lead Source Details Filters:</strong> Set default visible referral source details for members</li>
+          <li><strong>Days Ago Filter:</strong> Set default date range for lead filtering (0-365 days)</li>
+          <li><strong>Save Settings:</strong> Saves settings to localStorage for member default views</li>
           <li><strong>User Management:</strong> Placeholder for future user management features</li>
         </ul>
       </section>
@@ -824,12 +875,25 @@ export async function isAdmin(): Promise<boolean> {
           Routes are protected using Next.js middleware with Clerk:
         </p>
         <ul className="list-disc pl-6 space-y-2 mb-4">
-          <li><strong>Protected Routes:</strong> /availability, /map, /appointments, /serviceable-zips, /zip-demographics, /settings</li>
+          <li><strong>Protected Routes:</strong> /dashboard, /availability, /map, /appointments, /serviceable-zips, /zip-demographics, /settings, /documentation</li>
           <li><strong>Public Routes:</strong> /, /sign-in, /sign-up</li>
           <li><strong>Admin-Only Routes:</strong> /settings, /documentation</li>
+          <li><strong>Root Redirect:</strong> / redirects to /dashboard if signed in, /sign-in if not signed in</li>
         </ul>
 
-        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">9.4 Organization Matching</h3>
+        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">9.4 Sign-In Configuration</h3>
+        <p className="mb-4">
+          Authentication flow and sign-in settings:
+        </p>
+        <ul className="list-disc pl-6 space-y-2 mb-4">
+          <li><strong>Sign-In URL:</strong> /sign-in</li>
+          <li><strong>After Sign-In:</strong> Redirects to /dashboard</li>
+          <li><strong>After Sign-Out:</strong> Redirects to /sign-in</li>
+          <li><strong>Sign-Up:</strong> Disabled - users must be created manually in Clerk Dashboard</li>
+          <li><strong>Email Authentication:</strong> Required - must be enabled in Clerk settings</li>
+        </ul>
+
+        <h3 className="text-xl font-semibold text-navy mt-6 mb-3">9.5 Organization Matching</h3>
         <p className="mb-4">
           The system matches &quot;Windows USA&quot; organization using multiple variations:
         </p>
