@@ -204,6 +204,52 @@ function generateLeadsForRep(rep, numLeads = 100) {
       efScore = Math.floor(Math.random() * (800 - 640 + 1)) + 640; // 640-800
     }
     
+    // Lead Source: 60% Referral, 40% Affiliate
+    const isReferral = Math.random() < 0.6;
+    let leadSource, leadSourceDetails;
+    let refererName, refererPhone, refererAddress, refererRelationship;
+    
+    if (isReferral) {
+      leadSource = 'Referral';
+      // Distribute among Referral options
+      const referralOptions = [
+        'ReferralBD', 'ReferralEX', 'ReferralNG', 'ReferralPL', 'ReferralSA',
+        'ReferralTH', 'ReferralTM', 'ReferralTP', 'ReferralTX', 'ReferralYS',
+        'ReferralEX-PLUS'
+      ];
+      leadSourceDetails = referralOptions[Math.floor(Math.random() * referralOptions.length)];
+      
+      // Generate referrer data for Referral leads
+      const refererFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+      const refererLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+      refererName = `${refererFirstName} ${refererLastName}`;
+      refererPhone = generatePhoneNumber(state);
+      
+      // Generate referrer address (within 20 miles of lead address, or same city)
+      const refererCoords = generateCoordinatesInRadius(coords.lat, coords.lng, 20);
+      const refererStreetNumber = Math.floor(Math.random() * 9999) + 100;
+      const refererStreetName = streetNames[Math.floor(Math.random() * streetNames.length)];
+      
+      refererAddress = {
+        street: `${refererStreetNumber} ${refererStreetName}`,
+        city: city, // Same city as lead
+        state: state,
+        zip: zip, // Same zip or nearby - keeping same for simplicity
+        lat: parseFloat(refererCoords.lat.toFixed(6)),
+        lng: parseFloat(refererCoords.lng.toFixed(6))
+      };
+      
+      // Referrer relationship: 50% Friend, 50% Family
+      refererRelationship = Math.random() < 0.5 ? 'Friend' : 'Family';
+    } else {
+      leadSource = 'Affiliate';
+      // Distribute among Affiliate options
+      const affiliateOptions = [
+        'My Home Pros', 'Modernize', 'Angi', 'Buyerlink', 'Blue Fire', 'Exact Customer'
+      ];
+      leadSourceDetails = affiliateOptions[Math.floor(Math.random() * affiliateOptions.length)];
+    }
+    
     const lead = {
       id: `lead-${rep.id}-${i + 1}`,
       name: name,
@@ -221,8 +267,18 @@ function generateLeadsForRep(rep, numLeads = 100) {
       createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
       faradayCreditPropensity: faradayCreditPropensity,
       thinkUnlimitedScore: thinkUnlimitedScore,
-      efScore: efScore
+      efScore: efScore,
+      leadSource: leadSource,
+      leadSourceDetails: leadSourceDetails
     };
+    
+    // Add referrer fields only for Referral leads
+    if (isReferral) {
+      lead.refererName = refererName;
+      lead.refererPhone = refererPhone;
+      lead.refererAddress = refererAddress;
+      lead.refererRelationship = refererRelationship;
+    }
     
     leads.push(lead);
   }

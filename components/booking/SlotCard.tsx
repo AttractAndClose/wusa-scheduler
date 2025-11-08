@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Card } from '@/components/ui/card';
-import { Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SlotAvailability } from '@/types';
 import { format, parseISO } from 'date-fns';
 
@@ -11,6 +12,7 @@ interface SlotCardProps {
 }
 
 export function SlotCard({ slot, onSelect }: SlotCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const date = parseISO(slot.date);
   // Only disable if date is before today (not today itself)
   const today = new Date();
@@ -55,7 +57,7 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
       }`}
       onClick={() => !isDisabled && onSelect(slot)}
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         {/* Time */}
         <div className="text-sm font-medium text-navy">
           {slot.timeSlot === '10am' ? '10:00 AM' : 
@@ -67,6 +69,56 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
           {getStatusIcon()}
           <span className="font-medium">{getStatusText()}</span>
         </div>
+        
+        {/* Rep Names and Distances */}
+        {isAvailable && slot.availableReps.length > 0 && (
+          <div className="mt-1 pt-1.5 border-t border-gray-200 space-y-1">
+            {(isExpanded ? slot.availableReps : slot.availableReps.slice(0, 3)).map((rep, index) => {
+              // Determine distance indicator
+              const getDistanceIndicator = () => {
+                if (rep.anchorPoint.source === 'home') {
+                  return 'H';
+                } else if (rep.anchorPoint.source === 'previous-appointment') {
+                  return 'PA'; // Previous Appointment
+                } else if (rep.anchorPoint.source === 'next-appointment') {
+                  return 'NA'; // Next Appointment
+                }
+                return 'H'; // Default to Home
+              };
+              
+              return (
+                <div key={rep.repId} className="flex items-center justify-between text-xs">
+                  <span className="text-gray-700 font-medium truncate pr-2">{rep.repName}</span>
+                  <span className="text-gray-600 whitespace-nowrap">
+                    {getDistanceIndicator()} {rep.distance.toFixed(1)} mi
+                  </span>
+                </div>
+              );
+            })}
+            {slot.availableReps.length > 3 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 transition-colors w-full justify-center pt-1"
+              >
+                {isExpanded ? (
+                  <>
+                    <ChevronUp className="h-3 w-3" />
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3" />
+                    +{slot.availableReps.length - 3} more
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </Card>
   );

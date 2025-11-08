@@ -90,27 +90,27 @@ function MapContent() {
 
   return (
     <AppLayout>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-8">
-          {/* Map Section */}
-          <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-            <h2 className="text-xl font-semibold text-navy mb-4">
-              Appointment Map
-            </h2>
-            {isLoading ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="mt-4 text-navy">Loading map data...</p>
-              </div>
-            ) : (
-              <MapPageView
-                appointments={appointments}
-                reps={reps}
-                availability={availabilityData}
-                leads={leads}
-              />
-            )}
+      <main className="w-full px-5 py-8">
+        <div className="w-full">
+          {/* Page Title */}
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-navy">Referral Map</h1>
           </div>
+          
+          {/* Map Section */}
+          {isLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <p className="mt-4 text-navy">Loading referral map data...</p>
+            </div>
+          ) : (
+            <MapPageView
+              appointments={appointments}
+              reps={reps}
+              availability={availabilityData}
+              leads={leads}
+            />
+          )}
         </div>
       </main>
     </AppLayout>

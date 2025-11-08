@@ -1,11 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, DollarSign, GraduationCap, Home, TrendingUp, Key, Baby, Calendar, Building2, Clock, TrendingDown } from 'lucide-react';
+import { Users, DollarSign, GraduationCap, Home, TrendingUp, Key, Baby, Calendar, Building2, Clock, TrendingDown, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import type { Address } from '@/types';
 
 interface CensusStatsProps {
-  address: Address;
+  address: Address | null;
+  zipCode?: string;
+  onZipCodeChange?: (value: string) => void;
+  onSearch?: () => void;
+  onKeyPress?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 }
 
 interface CensusData {
@@ -29,15 +35,16 @@ interface CensusData {
 const CENSUS_API_KEY = '0df30a31dc37d3ead8748c5d536f86cb7e379b59';
 const CENSUS_YEAR = '2022'; // Using 2022 ACS 5-Year estimates (most recent comprehensive data)
 
-export function CensusStats({ address }: CensusStatsProps) {
+export function CensusStats({ address, zipCode = '', onZipCodeChange, onSearch, onKeyPress }: CensusStatsProps) {
   const [censusData, setCensusData] = useState<CensusData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchCensusData() {
-      if (!address.zip) {
+      if (!address || !address.zip) {
         setIsLoading(false);
+        setCensusData(null);
         return;
       }
 
@@ -249,41 +256,10 @@ export function CensusStats({ address }: CensusStatsProps) {
     }
 
     fetchCensusData();
-  }, [address.zip]);
-
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-        <h2 className="text-xl font-semibold text-navy mb-4">
-          ZIP Code Demographics
-        </h2>
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="mt-4 text-navy text-sm">Loading census data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-        <h2 className="text-xl font-semibold text-navy mb-4">
-          ZIP Code Demographics
-        </h2>
-        <div className="text-center py-4">
-          <p className="text-navy/70 text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!censusData || Object.keys(censusData).length === 0) {
-    return null;
-  }
+  }, [address?.zip]);
 
   const formatNumber = (num: number | undefined): string => {
-    if (num === undefined || num === null) return 'N/A';
+    if (num === undefined || num === null) return '';
     if (num >= 1000000) {
       return `$${(num / 1000000).toFixed(1)}M`;
     }
@@ -294,7 +270,7 @@ export function CensusStats({ address }: CensusStatsProps) {
   };
 
   const formatPopulation = (num: number | undefined): string => {
-    if (num === undefined || num === null) return 'N/A';
+    if (num === undefined || num === null) return '';
     if (num >= 1000000) {
       return `${(num / 1000000).toFixed(1)}M`;
     }
@@ -304,224 +280,244 @@ export function CensusStats({ address }: CensusStatsProps) {
     return num.toLocaleString();
   };
 
+  // Helper function to display value or blue hyphen
+  const displayValue = (value: number | undefined | null, formatter?: (num: number) => string): React.ReactNode => {
+    if (value === undefined || value === null || (typeof value === 'number' && isNaN(value))) {
+      return <span className="text-blue-600">—</span>;
+    }
+    const formatted = formatter ? formatter(value) : value.toString();
+    return formatted;
+  };
+
+  const currentZip = address?.zip ? address.zip.substring(0, 5) : '';
+
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-      <h2 className="text-xl font-semibold text-navy mb-4">
-        ZIP Code Demographics ({address.zip.substring(0, 5)})
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold text-navy">
+          ZIP Code Demographics{currentZip ? ` (${currentZip})` : ''}
+        </h2>
+        {onZipCodeChange && onSearch && (
+          <div className="flex items-center gap-2">
+            <div className="w-32">
+              <Input
+                type="text"
+                placeholder="ZIP code"
+                value={zipCode}
+                onChange={(e) => onZipCodeChange(e.target.value)}
+                onKeyPress={onKeyPress}
+                maxLength={10}
+                className="text-sm"
+              />
+            </div>
+            <Button
+              onClick={onSearch}
+              disabled={!zipCode.trim() || zipCode.trim().length < 5}
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Search className="h-3 w-3" />
+              Search
+            </Button>
+          </div>
+        )}
+      </div>
+      
+      {isLoading && (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <p className="mt-4 text-navy text-sm">Loading census data...</p>
+        </div>
+      )}
+      
+      {error && (
+        <div className="text-center py-4 mb-4">
+          <p className="text-navy/70 text-sm">{error}</p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {censusData.population !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Population</div>
-              <div className="text-lg font-semibold text-navy">
-                {formatPopulation(censusData.population)}
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Population</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.population, formatPopulation)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.medianIncome !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <DollarSign className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Median Household Income</div>
-              <div className="text-lg font-semibold text-navy">
-                {formatNumber(censusData.medianIncome)}
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <DollarSign className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Median Household Income</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.medianIncome, formatNumber)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.education !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <GraduationCap className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.education}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <GraduationCap className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.education, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.medianHomeValue !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Home className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Median Home Value</div>
-              <div className="text-lg font-semibold text-navy">
-                {formatNumber(censusData.medianHomeValue)}
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Home className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Median Home Value</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.medianHomeValue, formatNumber)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.unemploymentRate !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Unemployment Rate</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.unemploymentRate}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <TrendingUp className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Unemployment Rate</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.unemploymentRate, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* New Statistics - 10 Additional Stats */}
-        {censusData.homeownershipRate !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Key className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Homeownership Rate</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.homeownershipRate}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Key className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Homeownership Rate</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.homeownershipRate, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.medianGrossRent !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Home className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Median Gross Rent</div>
-              <div className="text-lg font-semibold text-navy">
-                {formatNumber(censusData.medianGrossRent)}
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Home className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Median Gross Rent</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.medianGrossRent, formatNumber)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.highIncomeHouseholds !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <TrendingDown className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">High-Income Households</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.highIncomeHouseholds}%
-              </div>
-              <div className="text-xs text-navy/50">($100K+)</div>
-            </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <TrendingDown className="h-5 w-5 text-primary" />
           </div>
-        )}
+          <div>
+            <div className="text-xs text-navy/60 font-medium">High-Income Households</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.highIncomeHouseholds, (v) => `${v}%`)}
+            </div>
+            <div className="text-xs text-navy/50">($100K+)</div>
+          </div>
+        </div>
 
-        {censusData.perCapitaIncome !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <DollarSign className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Per Capita Income</div>
-              <div className="text-lg font-semibold text-navy">
-                {formatNumber(censusData.perCapitaIncome)}
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <DollarSign className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Per Capita Income</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.perCapitaIncome, formatNumber)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.medianAge !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Median Age</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.medianAge} years
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Users className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Median Age</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.medianAge, (v) => `${v} years`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.newConstruction !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Calendar className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">New Construction</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.newConstruction}%
-              </div>
-              <div className="text-xs text-navy/50">(Built 2010+)</div>
-            </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Calendar className="h-5 w-5 text-primary" />
           </div>
-        )}
+          <div>
+            <div className="text-xs text-navy/60 font-medium">New Construction</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.newConstruction, (v) => `${v}%`)}
+            </div>
+            <div className="text-xs text-navy/50">(Built 2010+)</div>
+          </div>
+        </div>
 
-        {censusData.singleFamilyHomes !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Single-Family Homes</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.singleFamilyHomes}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Building2 className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Single-Family Homes</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.singleFamilyHomes, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.meanCommuteTime !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Mean Commute Time</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.meanCommuteTime} min
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Clock className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Mean Commute Time</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.meanCommuteTime, (v) => `${v} min`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.householdsWithChildren !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Baby className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Households with Children</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.householdsWithChildren}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Baby className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Households with Children</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.householdsWithChildren, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
 
-        {censusData.bachelorsOrHigher !== undefined && (
-          <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <GraduationCap className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
-              <div className="text-lg font-semibold text-navy">
-                {censusData.bachelorsOrHigher}%
-              </div>
+        <div className="flex items-start gap-3 p-3 bg-gray-light rounded-lg">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <GraduationCap className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <div className="text-xs text-navy/60 font-medium">Bachelor&apos;s Degree or Higher</div>
+            <div className="text-lg font-semibold text-navy">
+              {displayValue(censusData?.bachelorsOrHigher, (v) => `${v}%`)}
             </div>
           </div>
-        )}
+        </div>
       </div>
       <p className="mt-4 text-xs text-navy/50">
         Data from U.S. Census Bureau {CENSUS_YEAR} ACS 5-Year Estimates

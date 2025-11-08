@@ -7,6 +7,9 @@ import type { Appointment, SalesRep, Availability, Address, Lead, TimeSlot } fro
 import { format, parseISO, addDays, startOfWeek, addWeeks, startOfDay, isBefore } from 'date-fns';
 import { calculateDistance } from '@/lib/distance';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsAdmin } from '@/lib/use-admin';
+import { loadMapSettings, saveMapSettings } from '@/lib/map-settings';
 
 // Fix for default marker icons in Next.js
 if (typeof window !== 'undefined') {
@@ -98,6 +101,26 @@ function MapBoundsTracker({ onBoundsChange }: { onBoundsChange: (bounds: L.LatLn
   return null;
 }
 
+// Component to track map zoom level
+function MapZoomTracker({ onZoomChange }: { onZoomChange: (zoom: number) => void }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const updateZoom = () => {
+      onZoomChange(map.getZoom());
+    };
+
+    map.on('zoomend', updateZoom);
+    updateZoom(); // Initial zoom
+
+    return () => {
+      map.off('zoomend', updateZoom);
+    };
+  }, [map, onZoomChange]);
+
+  return null;
+}
+
 // Component to handle map interaction events
 function MapInteractionHandler({ onInteraction }: { onInteraction: () => void }) {
   const map = useMap();
@@ -166,7 +189,7 @@ function ScaleLegend() {
   };
 
   return (
-    <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 pt-3 pb-2 rounded shadow-md border border-gray-300 z-[1000]">
+    <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-3 pt-5 pb-2 rounded shadow-md border border-gray-300 z-[1000]">
       <div className="flex items-center gap-2">
         <div className="text-xs font-semibold text-gray-900">Scale:</div>
         <div className="flex items-center gap-2">
@@ -182,42 +205,86 @@ function ScaleLegend() {
 }
 
 // Map Legend Component (used outside map)
-function MapLegend() {
+function MapLegend({ 
+  hasSelectedRep, 
+  referralColors, 
+  referralSourceDetails,
+  referralSourceFilters,
+  showReps,
+  showAppointments,
+  visibleReferralSources,
+  onToggleReps,
+  onToggleAppointments,
+  onToggleReferralSource
+}: { 
+  hasSelectedRep: boolean;
+  referralColors: Record<string, string>;
+  referralSourceDetails: readonly string[];
+  referralSourceFilters: Set<string>;
+  showReps: boolean;
+  showAppointments: boolean;
+  visibleReferralSources: Set<string>;
+  onToggleReps: () => void;
+  onToggleAppointments: () => void;
+  onToggleReferralSource: (sourceDetail: string) => void;
+}) {
+  // Filter referral source details to only show those that are enabled
+  // If filters are empty (show all), display all; otherwise only show filtered ones
+  const visibleSourceDetails = referralSourceFilters.size === 0
+    ? referralSourceDetails
+    : referralSourceDetails.filter(detail => referralSourceFilters.has(detail));
+  
   return (
     <div className="bg-white px-4 py-3 rounded-lg border border-gray-300 shadow-sm">
       <div className="text-sm font-semibold text-gray-900 mb-3">Legend</div>
       <div className="flex flex-wrap items-center gap-4">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 flex items-center justify-center">
-            <img 
-              src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" 
-              alt="Rep pin" 
-              className="w-4 h-5"
-            />
-          </div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showReps}
+            onChange={onToggleReps}
+            className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+          />
+          <img 
+            src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png" 
+            alt="Rep pin" 
+            className="w-4 h-5"
+            style={{ objectFit: 'contain' }}
+          />
           <span className="text-sm text-gray-700">Reps</span>
-        </div>
-        <div className="flex items-center gap-2">
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showAppointments}
+            onChange={onToggleAppointments}
+            className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+          />
           <div 
             className="w-3 h-3 rounded-full border border-white shadow-sm"
             style={{ backgroundColor: '#10B981' }}
           ></div>
           <span className="text-sm text-gray-700">Appointments</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
-            style={{ backgroundColor: '#EF4444' }}
-          ></div>
-          <span className="text-sm text-gray-700">Leads (EF Score ≥ 640)</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
-            style={{ backgroundColor: '#2563EB' }}
-          ></div>
-          <span className="text-sm text-gray-700">Leads (EF Score 0 or 1)</span>
-        </div>
+        </label>
+        {hasSelectedRep && (
+          <>
+            {visibleSourceDetails.map((sourceDetail) => (
+              <label key={sourceDetail} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={visibleReferralSources.has(sourceDetail)}
+                  onChange={() => onToggleReferralSource(sourceDetail)}
+                  className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+                />
+                <div 
+                  className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                  style={{ backgroundColor: referralColors[sourceDetail] || '#6B7280' }}
+                ></div>
+                <span className="text-sm text-gray-700">{sourceDetail}</span>
+              </label>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );
@@ -326,6 +393,7 @@ export function MapPageView({
   const [selectedDay, setSelectedDay] = useState<string | null>(todayStr); // Default to today
   const [shouldAutoZoom, setShouldAutoZoom] = useState(true);
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null);
+  const [mapZoom, setMapZoom] = useState<number>(6);
   const [zipCodeInput, setZipCodeInput] = useState('');
   const [zipCodeError, setZipCodeError] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'score' | 'availability'>('score');
@@ -333,9 +401,80 @@ export function MapPageView({
   const [dayOffset, setDayOffset] = useState(0);
   const [leadsPage, setLeadsPage] = useState(1);
   const leadsPerPage = 50;
+  const [leadsSortBy, setLeadsSortBy] = useState<'distance' | 'faraday' | 'think' | 'ef'>('distance');
   const [schedulingLead, setSchedulingLead] = useState<(Lead & { distance: number }) | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
+  
+  // Check if user is admin
+  const isAdmin = useIsAdmin();
+  
+  // Referral Lead Source Details options
+  const REFERRAL_SOURCE_DETAILS = [
+    'ReferralBD', 'ReferralEX', 'ReferralNG', 'ReferralPL', 'ReferralSA',
+    'ReferralTH', 'ReferralTM', 'ReferralTP', 'ReferralTX', 'ReferralYS',
+    'ReferralEX-PLUS'
+  ] as const;
+  
+  // Colors for each Referral Lead Source Detail
+  const REFERRAL_COLORS: Record<string, string> = {
+    'ReferralBD': '#EF4444',   // Red
+    'ReferralEX': '#3B82F6',   // Blue
+    'ReferralNG': '#10B981',   // Green
+    'ReferralPL': '#F59E0B',   // Amber
+    'ReferralSA': '#8B5CF6',    // Purple
+    'ReferralTH': '#EC4899',   // Pink
+    'ReferralTM': '#06B6D4',   // Cyan
+    'ReferralTP': '#84CC16',   // Lime
+    'ReferralTX': '#F97316',   // Orange
+    'ReferralYS': '#6366F1',   // Indigo
+    'ReferralEX-PLUS': '#14B8A6' // Teal
+  };
+  
+  // Lead filter - use Set to allow multi-select of EF Score options
+  // Admins can change these, non-admins use defaults from settings
+  const [leadFilters, setLeadFilters] = useState<Set<'ef-640-plus' | 'ef-1' | 'ef-0'>>(new Set());
+  const [daysAgoFilter, setDaysAgoFilter] = useState<number>(30);
+  
+  // Referral Lead Source Details filter - use Set to allow multi-select
+  // Empty set means show all (default), otherwise show only selected
+  const [referralSourceFilters, setReferralSourceFilters] = useState<Set<string>>(new Set());
+  
+  // Load default settings for non-admins on mount and when admin status changes
+  useEffect(() => {
+    if (!isAdmin) {
+      const settings = loadMapSettings();
+      setLeadFilters(new Set(settings.leadFilters));
+      setDaysAgoFilter(settings.daysAgoFilter);
+      setReferralSourceFilters(new Set(settings.referralSourceFilters));
+    } else {
+      // Reset to defaults for admins (they can customize)
+      setLeadFilters(new Set());
+      setDaysAgoFilter(30);
+      setReferralSourceFilters(new Set()); // Empty set = show all
+    }
+  }, [isAdmin]);
+  
+  // Legend visibility toggles - all default to true (on)
+  const [showReps, setShowReps] = useState(true);
+  const [showAppointments, setShowAppointments] = useState(true);
+  
+  // Toggle visibility for individual referral source details
+  const [visibleReferralSources, setVisibleReferralSources] = useState<Set<string>>(
+    new Set(REFERRAL_SOURCE_DETAILS)
+  );
+  
+  const toggleReferralSource = (sourceDetail: string) => {
+    setVisibleReferralSources(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sourceDetail)) {
+        newSet.delete(sourceDetail);
+      } else {
+        newSet.add(sourceDetail);
+      }
+      return newSet;
+    });
+  };
 
   // Filter out Philadelphia reps (coordinates around 39.95, -75.16)
   // Philadelphia area: roughly lat 39.8-40.1, lng -75.3 to -74.9
@@ -364,7 +503,7 @@ export function MapPageView({
     return true;
   });
 
-  // Generate day buttons (All Appointments + today + next 4 days, with offset for scrolling)
+  // Generate day buttons (All Appointments + today + next 9 days, with offset for scrolling)
   const dayButtons = [
     { label: 'All Appointments', date: null },
     { label: format(addDays(today, dayOffset), 'EEE, MMM d'), date: format(addDays(today, dayOffset), 'yyyy-MM-dd') },
@@ -372,6 +511,11 @@ export function MapPageView({
     { label: format(addDays(today, dayOffset + 2), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 2), 'yyyy-MM-dd') },
     { label: format(addDays(today, dayOffset + 3), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 3), 'yyyy-MM-dd') },
     { label: format(addDays(today, dayOffset + 4), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 4), 'yyyy-MM-dd') },
+    { label: format(addDays(today, dayOffset + 5), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 5), 'yyyy-MM-dd') },
+    { label: format(addDays(today, dayOffset + 6), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 6), 'yyyy-MM-dd') },
+    { label: format(addDays(today, dayOffset + 7), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 7), 'yyyy-MM-dd') },
+    { label: format(addDays(today, dayOffset + 8), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 8), 'yyyy-MM-dd') },
+    { label: format(addDays(today, dayOffset + 9), 'EEE, MMM d'), date: format(addDays(today, dayOffset + 9), 'yyyy-MM-dd') },
   ];
 
   // Filter appointments based on selected day
@@ -515,8 +659,29 @@ export function MapPageView({
       })
     : filteredReps;
 
-  // Sort visible reps
-  const visibleReps = [...visibleRepsFiltered].sort((a, b) => {
+  // Filter reps by availability for selected day
+  const repsWithAvailability = useMemo(() => {
+    if (!selectedDay) {
+      // If no day selected, show all visible reps
+      return visibleRepsFiltered;
+    }
+    
+    const selectedDate = parseISO(selectedDay);
+    const dayName = format(selectedDate, 'EEEE').toLowerCase();
+    
+    return visibleRepsFiltered.filter(rep => {
+      const repAvailability = availability[rep.id] || {};
+      const dayAvailability = repAvailability[dayName as keyof typeof repAvailability];
+      
+      // Show rep if they have availability for this day OR have appointments on this day
+      const hasAvailability = dayAvailability && dayAvailability.length > 0;
+      const hasAppointments = dayFilteredAppointments.some(apt => apt.repId === rep.id && apt.date === selectedDay);
+      
+      return hasAvailability || hasAppointments;
+    });
+  }, [visibleRepsFiltered, selectedDay, availability, dayFilteredAppointments]);
+  
+  const visibleReps = [...repsWithAvailability].sort((a, b) => {
     if (sortBy === 'name') {
       return a.name.localeCompare(b.name);
     } else if (sortBy === 'score') {
@@ -549,8 +714,14 @@ export function MapPageView({
     }
 
     if (mapRef.current) {
-      // Center the map on the zip code location
-      mapRef.current.setView([coords.lat, coords.lng], mapRef.current.getZoom());
+      // Calculate bounds for 45 miles radius with zip code at center
+      const latRadius = 45 / 69; // 1 degree latitude ≈ 69 miles
+      const lngRadius = 45 / (69 * Math.cos(coords.lat * Math.PI / 180)); // Adjust for latitude
+      const bounds = L.latLngBounds(
+        [coords.lat - latRadius, coords.lng - lngRadius],
+        [coords.lat + latRadius, coords.lng + lngRadius]
+      );
+      mapRef.current.fitBounds(bounds, { padding: [20, 20] });
       setShouldAutoZoom(false); // Disable auto-zoom after manual zip search
     }
   };
@@ -609,13 +780,46 @@ export function MapPageView({
     const minLng = repLocation[1] - lngRadius;
     const maxLng = repLocation[1] + lngRadius;
     
+    // Calculate date threshold for days ago filter
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysAgoDate = new Date(today);
+    daysAgoDate.setDate(today.getDate() - daysAgoFilter);
+    
     // First pass: filter by bounding box (much faster)
-    const candidates = leads.filter(lead => 
+    // Only show Referral leads
+    let candidates = leads.filter(lead => 
+      lead.leadSource === 'Referral' &&
       lead.address.lat >= minLat && 
       lead.address.lat <= maxLat &&
       lead.address.lng >= minLng && 
       lead.address.lng <= maxLng
     );
+    
+    // Filter by Referral Lead Source Details - if no filters selected, show all; otherwise show only selected
+    if (referralSourceFilters.size > 0) {
+      candidates = candidates.filter(lead => 
+        lead.leadSourceDetails && referralSourceFilters.has(lead.leadSourceDetails)
+      );
+    }
+    
+    // Filter by created date (days ago)
+    candidates = candidates.filter(lead => {
+      if (!lead.createdAt) return true; // Include leads without createdAt
+      const leadDate = new Date(lead.createdAt);
+      leadDate.setHours(0, 0, 0, 0);
+      return leadDate >= daysAgoDate;
+    });
+    
+    // Filter by EF Score - if no filters selected, show all; otherwise show leads matching any selected filter
+    if (leadFilters.size > 0) {
+      candidates = candidates.filter(lead => {
+        if (leadFilters.has('ef-640-plus') && lead.efScore !== undefined && lead.efScore >= 640) return true;
+        if (leadFilters.has('ef-1') && lead.efScore === 1) return true;
+        if (leadFilters.has('ef-0') && lead.efScore === 0) return true;
+        return false;
+      });
+    }
     
     // Second pass: calculate exact distances only for candidates
     const leadsWithDistance = candidates.map(lead => ({
@@ -626,11 +830,33 @@ export function MapPageView({
         lead.address.lat,
         lead.address.lng
       )
-    })).filter(lead => lead.distance <= 90)
-      .sort((a, b) => a.distance - b.distance);
+    })).filter(lead => lead.distance <= 90);
     
-    return leadsWithDistance;
-  }, [selectedRepId, filteredReps, leads, selectedDay]);
+    // Sort based on selected option
+    const sortedLeads = [...leadsWithDistance].sort((a, b) => {
+      switch (leadsSortBy) {
+        case 'distance':
+          return a.distance - b.distance;
+        case 'faraday':
+          const aFaraday = a.faradayCreditPropensity ?? 0;
+          const bFaraday = b.faradayCreditPropensity ?? 0;
+          return bFaraday - aFaraday; // Descending (higher is better)
+        case 'think':
+          const thinkOrder: Record<string, number> = { 'Platinum': 4, 'Gold': 3, 'Silver': 2, 'Bronze': 1 };
+          const aThink = thinkOrder[a.thinkUnlimitedScore || ''] ?? 0;
+          const bThink = thinkOrder[b.thinkUnlimitedScore || ''] ?? 0;
+          return bThink - aThink; // Descending (higher is better)
+        case 'ef':
+          const aEf = a.efScore ?? 0;
+          const bEf = b.efScore ?? 0;
+          return bEf - aEf; // Descending (higher is better)
+        default:
+          return a.distance - b.distance;
+      }
+    });
+    
+    return sortedLeads;
+  }, [selectedRepId, filteredReps, leads, selectedDay, Array.from(leadFilters).sort().join(','), daysAgoFilter, Array.from(referralSourceFilters).sort().join(','), leadsSortBy]);
 
   const totalLeadsPages = useMemo(() => 
     Math.ceil(allLeadsForRep.length / leadsPerPage),
@@ -732,82 +958,235 @@ export function MapPageView({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Left side: Map */}
-        <div className="lg:col-span-2 space-y-4">
-        {/* Day Filter Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
+      {/* Day Filter Buttons */}
+      <div className="flex flex-wrap items-center gap-2">
+        {dayButtons.map((button) => (
+          <button
+            key={button.date || 'all'}
+            onClick={() => setSelectedDay(button.date)}
+            className={`px-3 py-2 rounded-md text-xs font-medium transition-colors border border-gray-300 ${
+              selectedDay === button.date
+                ? 'bg-navy text-white border-navy'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {button.label}
+          </button>
+        ))}
+        <div className="flex gap-1">
           <button
             onClick={() => setDayOffset(prev => Math.max(0, prev - 1))}
             disabled={dayOffset === 0}
-            className={`px-2 py-2 rounded-md text-xs font-medium transition-colors ${
+            className={`px-2 py-2 rounded-md text-xs font-medium transition-colors border border-gray-300 ${
               dayOffset === 0
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-white text-gray-400 cursor-not-allowed border-gray-200'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
             }`}
             title="Previous days"
           >
             ←
           </button>
-          {dayButtons.map((button) => (
-            <button
-              key={button.date || 'all'}
-              onClick={() => setSelectedDay(button.date)}
-              className={`px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                selectedDay === button.date
-                  ? 'bg-navy text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {button.label}
-            </button>
-          ))}
           <button
             onClick={handleDayScrollForward}
-            className="px-2 py-2 rounded-md text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+            className="px-2 py-2 rounded-md text-xs font-medium bg-white text-gray-700 hover:bg-gray-50 border border-gray-300 transition-colors"
             title="Next days"
           >
             →
           </button>
         </div>
+      </div>
 
-        {/* Zip Code Search */}
-        <div className="flex gap-2 items-start">
-          <div className="flex-1">
-            <label htmlFor="zipCode" className="block text-sm font-medium text-gray-700 mb-1">
-              Search by Zip Code
-            </label>
-            <input
-              id="zipCode"
-              type="text"
-              value={zipCodeInput}
-              onChange={(e) => {
-                setZipCodeInput(e.target.value);
-                setZipCodeError('');
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleZipCodeSearch();
-                }
-              }}
-              placeholder="Enter 5-digit zip code"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
-            />
+      {/* Lead Filter Toggles and Date Slider - Above Map (Only visible to admins) */}
+      {selectedRepId && isAdmin && (
+        <div className="bg-white rounded-lg border border-gray-300 p-4">
+          <div className="space-y-4">
+            {/* EF Score Filter Toggles */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-gray-700">Filter Leads:</span>
+              <button
+                onClick={() => setLeadFilters(new Set())}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  leadFilters.size === 0
+                    ? 'bg-navy text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All Leads
+              </button>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={leadFilters.has('ef-640-plus')}
+                  onChange={(e) => {
+                    const newFilters = new Set(leadFilters);
+                    if (e.target.checked) {
+                      newFilters.add('ef-640-plus');
+                    } else {
+                      newFilters.delete('ef-640-plus');
+                    }
+                    setLeadFilters(newFilters);
+                  }}
+                  className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+                />
+                <span className="text-xs text-gray-700">EF Score ≥ 640</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={leadFilters.has('ef-1')}
+                  onChange={(e) => {
+                    const newFilters = new Set(leadFilters);
+                    if (e.target.checked) {
+                      newFilters.add('ef-1');
+                    } else {
+                      newFilters.delete('ef-1');
+                    }
+                    setLeadFilters(newFilters);
+                  }}
+                  className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+                />
+                <span className="text-xs text-gray-700">EF Score 1</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={leadFilters.has('ef-0')}
+                  onChange={(e) => {
+                    const newFilters = new Set(leadFilters);
+                    if (e.target.checked) {
+                      newFilters.add('ef-0');
+                    } else {
+                      newFilters.delete('ef-0');
+                    }
+                    setLeadFilters(newFilters);
+                  }}
+                  className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+                />
+                <span className="text-xs text-gray-700">EF Score 0</span>
+              </label>
+            </div>
+            
+            {/* Referral Lead Source Details Filter */}
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-gray-700">Referral Lead Source Details:</span>
+              <button
+                onClick={() => setReferralSourceFilters(new Set())}
+                className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+                  referralSourceFilters.size === 0
+                    ? 'bg-navy text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                All
+              </button>
+              {REFERRAL_SOURCE_DETAILS.map((sourceDetail) => (
+                <label key={sourceDetail} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={referralSourceFilters.has(sourceDetail)}
+                    onChange={(e) => {
+                      const newFilters = new Set(referralSourceFilters);
+                      if (e.target.checked) {
+                        newFilters.add(sourceDetail);
+                      } else {
+                        newFilters.delete(sourceDetail);
+                      }
+                      setReferralSourceFilters(newFilters);
+                    }}
+                    className="w-4 h-4 text-navy border-gray-300 rounded focus:ring-navy"
+                  />
+                  <span className="text-xs text-gray-700">{sourceDetail}</span>
+                </label>
+              ))}
+            </div>
+            
+            {/* Created Date Slider - on same row */}
+            <div className="flex items-center gap-3">
+              <label htmlFor="daysAgoSlider" className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                Created within last:
+              </label>
+              <input
+                id="daysAgoSlider"
+                type="range"
+                min="0"
+                max="365"
+                value={daysAgoFilter}
+                onChange={(e) => setDaysAgoFilter(Number(e.target.value))}
+                className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-xs font-medium text-gray-900 min-w-[60px] text-right">
+                {daysAgoFilter} days
+              </span>
+            </div>
+            
+            {/* Update Member Filters and Reset Map Buttons */}
+            <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setSelectedRepId(null);
+                }}
+                className="px-4 py-2 bg-gray-500 text-white text-xs font-medium rounded hover:bg-gray-600 transition-colors"
+              >
+                Reset Map
+              </button>
+              <button
+                onClick={() => {
+                  const memberSettings = {
+                    leadFilters: leadFilters,
+                    daysAgoFilter: daysAgoFilter,
+                    referralSourceFilters: referralSourceFilters,
+                  };
+                  saveMapSettings(memberSettings);
+                  alert('Member filter settings updated! These will be the default view for all non-admin users.');
+                }}
+                className="px-4 py-2 bg-navy text-white text-xs font-medium rounded hover:bg-navy/90 transition-colors"
+              >
+                Update Member Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full">
+        {/* Left side: Map */}
+        <div className="lg:col-span-2">
+        {/* Map Container with Legend */}
+        <div className="space-y-4">
+          {/* Map */}
+          <div className="h-[700px] w-full rounded-lg overflow-hidden border border-gray-300 relative z-0">
+          {/* Zip Code Search - Top Right Overlay */}
+          <div className="absolute top-2 right-2 z-[1000] bg-white rounded-lg shadow-lg border border-gray-300 p-2 max-w-[200px]">
+            <div className="flex gap-1 items-center">
+              <input
+                id="zipCode"
+                type="text"
+                value={zipCodeInput}
+                onChange={(e) => {
+                  setZipCodeInput(e.target.value);
+                  setZipCodeError('');
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleZipCodeSearch();
+                  }
+                }}
+                placeholder="Zip Code"
+                className="flex-1 min-w-0 px-2 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                maxLength={5}
+              />
+              <button
+                onClick={handleZipCodeSearch}
+                className="flex-shrink-0 px-2 py-1.5 bg-navy text-white rounded text-xs font-medium hover:bg-navy/90 transition-colors"
+              >
+                Go
+              </button>
+            </div>
             {zipCodeError && (
-              <p className="mt-1 text-xs text-red-600">{zipCodeError}</p>
+              <p className="mt-1 text-xs text-red-600 break-words">{zipCodeError}</p>
             )}
           </div>
-          <button
-            onClick={handleZipCodeSearch}
-            className="mt-6 px-4 py-2 bg-navy text-white rounded-md text-sm font-medium hover:bg-navy/90 transition-colors"
-          >
-            Search
-          </button>
-        </div>
-
-        {/* Map */}
-        <div className="h-[500px] w-full rounded-lg overflow-hidden border border-gray-300 relative z-0">
           <MapContainer
             center={mapCenter}
             zoom={6}
@@ -828,6 +1207,8 @@ export function MapPageView({
             />
             
             <MapBoundsTracker onBoundsChange={setMapBounds} />
+            
+            <MapZoomTracker onZoomChange={setMapZoom} />
             
             <MapInteractionHandler onInteraction={handleMapInteraction} />
             
@@ -858,7 +1239,7 @@ export function MapPageView({
           )}
 
           {/* Appointment markers - all green, small dots */}
-          {dayFilteredAppointments.map((apt) => {
+          {showAppointments && dayFilteredAppointments.map((apt) => {
             const aptDate = parseISO(apt.date);
             const rep = apt.repId ? filteredReps.find(r => r.id === apt.repId) : null;
 
@@ -868,7 +1249,7 @@ export function MapPageView({
                 position={[apt.address.lat, apt.address.lng]}
                 icon={L.divIcon({
                   className: 'custom-marker',
-                  html: `<div style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>`,
+                  html: `<div style="background-color: #10B981; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></div>`,
                   iconSize: [10, 10],
                   iconAnchor: [5, 5],
                 })}
@@ -902,12 +1283,21 @@ export function MapPageView({
             );
           })}
 
-          {/* Lead markers - color based on EF Score (only show when rep is selected) */}
+          {/* Lead markers - color based on Referral Lead Source Details (only show when rep is selected) */}
           {/* Only render first 1000 leads on map to prevent performance issues */}
           {selectedRepId && allLeadsForRep.slice(0, 1000).map((lead) => {
-            // Determine marker color based on EF Score
-            // Red if EF Score >= 640, Blue if EF Score is 0 or 1
-            const markerColor = (lead.efScore !== undefined && lead.efScore >= 640) ? '#EF4444' : '#2563EB';
+            // Only show Referral leads
+            if (lead.leadSource !== 'Referral') return null;
+            
+            // Check if this referral source detail is visible
+            if (lead.leadSourceDetails && !visibleReferralSources.has(lead.leadSourceDetails)) {
+              return null;
+            }
+            
+            // Get color based on Lead Source Details
+            const markerColor = lead.leadSourceDetails 
+              ? (REFERRAL_COLORS[lead.leadSourceDetails] || '#6B7280') 
+              : '#6B7280';
             
             return (
               <Marker
@@ -915,7 +1305,7 @@ export function MapPageView({
                 position={[lead.address.lat, lead.address.lng]}
                 icon={L.divIcon({
                   className: 'custom-marker',
-                  html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
+                  html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
                   iconSize: [12, 12],
                   iconAnchor: [6, 6],
                 })}
@@ -924,43 +1314,87 @@ export function MapPageView({
                   <div className="text-xs font-semibold">{lead.name}</div>
                 </Tooltip>
                 <Popup>
-                  <div className="text-sm space-y-1">
-                    <div className="font-semibold text-navy">{lead.name}</div>
-                    <div className="text-gray-600">
-                      <strong>Email:</strong> {lead.email}
-                    </div>
-                    <div className="text-gray-600">
-                      <strong>Phone:</strong> {lead.phone}
-                    </div>
-                    <div className="text-gray-600">
-                      <strong>Address:</strong> {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
-                    </div>
-                    <div className="text-gray-600">
-                      <strong>Status:</strong> {lead.status || 'new'}
-                    </div>
-                    {lead.faradayCreditPropensity !== undefined && (
-                      <div className="text-gray-600">
-                        <strong>Faraday Credit Propensity:</strong> {lead.faradayCreditPropensity}/100
-                      </div>
-                    )}
-                    {lead.thinkUnlimitedScore && (
-                      <div className="text-gray-600">
-                        <strong>Think Unlimited Score:</strong> {lead.thinkUnlimitedScore}
-                      </div>
-                    )}
-                    {lead.efScore !== undefined && (
-                      <div className="text-gray-600">
-                        <strong>EF Score:</strong> {lead.efScore}
-                      </div>
-                    )}
-                    {selectedRepId && (() => {
-                      const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
-                      return selectedRep ? (
-                        <div className="text-gray-600 mt-1 pt-1 border-t border-gray-300">
-                          <strong>Distance from {selectedRep.name}:</strong> {lead.distance.toFixed(1)} miles
+                  <div>
+                    <div className="grid gap-3" style={{ gridTemplateColumns: 'auto auto' }}>
+                      {/* Left Column - Customer Info */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-navy mb-2 pb-1.5 border-b border-gray-200">Customer</h3>
+                        <div className="space-y-1.5">
+                          <div>
+                            <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Name</div>
+                            <div className="text-xs text-gray-900 break-words">{lead.name}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Email</div>
+                            <div className="text-xs text-gray-900 break-all">{lead.email}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Phone</div>
+                            <div className="text-xs text-gray-900">{lead.phone}</div>
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Address</div>
+                            <div className="text-xs text-gray-900 break-words">
+                              {lead.address.street}<br />
+                              {lead.address.city}, {lead.address.state} {lead.address.zip}
+                            </div>
+                          </div>
+                          {lead.leadSourceDetails && (
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Lead Source</div>
+                              <div className="text-xs text-gray-900 break-words">{lead.leadSourceDetails}</div>
+                            </div>
+                          )}
+                          {lead.efScore !== undefined && (
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">EF Score</div>
+                              <div className="text-xs text-gray-900">{lead.efScore}</div>
+                            </div>
+                          )}
+                          {selectedRepId && (() => {
+                            const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+                            return selectedRep ? (
+                              <div>
+                                <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Distance</div>
+                                <div className="text-xs text-gray-900 break-words">{lead.distance.toFixed(1)} mi from {selectedRep.name}</div>
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
-                      ) : null;
-                    })()}
+                      </div>
+                      
+                      {/* Right Column - Referrer Info */}
+                      <div>
+                        {lead.refererName ? (
+                          <>
+                            <h3 className="text-sm font-semibold text-navy mb-2 pb-1.5 border-b border-gray-200">Referer</h3>
+                            <div className="space-y-1.5">
+                              <div>
+                                <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Name</div>
+                                <div className="text-xs text-gray-900 break-words">{lead.refererName} ({lead.refererRelationship})</div>
+                              </div>
+                              {lead.refererPhone && (
+                                <div>
+                                  <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Phone</div>
+                                  <div className="text-xs text-gray-900">{lead.refererPhone}</div>
+                                </div>
+                              )}
+                              {lead.refererAddress && (
+                                <div>
+                                  <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Address</div>
+                                  <div className="text-xs text-gray-900 break-words">
+                                    {lead.refererAddress.street}<br />
+                                    {lead.refererAddress.city}, {lead.refererAddress.state} {lead.refererAddress.zip}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-xs text-gray-500 italic">No referrer information</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </Popup>
               </Marker>
@@ -981,7 +1415,8 @@ export function MapPageView({
                 pathOptions={{
                   color: '#3B82F6',
                   fillColor: '#3B82F6',
-                  fillOpacity: 0.2,
+                  fillOpacity: 0.1,
+                  opacity: 0.4,
                   weight: 1,
                 }}
               />
@@ -989,7 +1424,7 @@ export function MapPageView({
           })()}
 
           {/* Rep markers - blue pins */}
-          {filteredReps.map((rep) => {
+          {showReps && filteredReps.map((rep) => {
             const repLocation = getRepLocation(rep);
             const repAvailability = availability[rep.id] || {};
             
@@ -1013,25 +1448,37 @@ export function MapPageView({
 
             const isSelected = selectedRepId === rep.id;
             
-            // Create orange marker icon for selected rep, blue for others
+            // Determine if zoomed in (zoom level > 8 means more zoomed in)
+            const isZoomedIn = mapZoom > 8;
+            
+            // Size based on zoom level and selection
+            const baseWidth = isZoomedIn ? 24 : 14;
+            const baseHeight = isZoomedIn ? 40 : 24;
+            const selectedWidth = isZoomedIn ? 30 : 18;
+            const selectedHeight = isZoomedIn ? 50 : 30;
+            
+            const iconWidth = isSelected ? selectedWidth : baseWidth;
+            const iconHeight = isSelected ? selectedHeight : baseHeight;
+            
+            // Create pin icon - red for selected, blue for others
             const markerIcon = isSelected
               ? L.divIcon({
                   className: 'custom-marker',
-                  html: `<svg width="18" height="30" viewBox="0 0 18 30" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M9 0C4.03 0 0 4.03 0 9c0 5.25 9 21 9 21s9-15.75 9-21c0-4.97-4.03-9-9-9z" fill="#F97316" stroke="white" stroke-width="1.5"/>
+                  html: `<svg width="${iconWidth}" height="${iconHeight}" viewBox="0 0 18 30" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 0C4.03 0 0 4.03 0 9c0 5.25 9 21 9 21s9-15.75 9-21c0-4.97-4.03-9-9-9z" fill="#EF4444" stroke="white" stroke-width="1.5"/>
                   </svg>`,
-                  iconSize: [18, 30],
-                  iconAnchor: [9, 30],
-                  popupAnchor: [1, -30],
+                  iconSize: [iconWidth, iconHeight],
+                  iconAnchor: [iconWidth / 2, iconHeight],
+                  popupAnchor: [1, -iconHeight],
                 })
               : L.icon({
                   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
                   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
                   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-                  iconSize: [18, 30],
-                  iconAnchor: [9, 30],
-                  popupAnchor: [1, -30],
-                  shadowSize: [30, 30]
+                  iconSize: [iconWidth, iconHeight],
+                  iconAnchor: [iconWidth / 2, iconHeight],
+                  popupAnchor: [1, -iconHeight],
+                  shadowSize: [iconWidth + 6, iconHeight + 6]
                 });
 
             return (
@@ -1083,15 +1530,27 @@ export function MapPageView({
             );
           })}
           </MapContainer>
-        </div>
-        
+          </div>
+          
           {/* Map Legend - below the map */}
-          <MapLegend />
+          <MapLegend 
+            hasSelectedRep={!!selectedRepId} 
+            referralColors={REFERRAL_COLORS}
+            referralSourceDetails={REFERRAL_SOURCE_DETAILS}
+            referralSourceFilters={referralSourceFilters}
+            showReps={showReps}
+            showAppointments={showAppointments}
+            visibleReferralSources={visibleReferralSources}
+            onToggleReps={() => setShowReps(!showReps)}
+            onToggleAppointments={() => setShowAppointments(!showAppointments)}
+            onToggleReferralSource={toggleReferralSource}
+          />
+        </div>
         </div>
 
         {/* Right side: Reps List */}
         <div className="lg:col-span-1">
-        <div className="bg-white rounded-lg border border-gray-300 p-4 h-full">
+        <div className="bg-white rounded-lg border border-gray-300 p-4 flex flex-col" style={{ height: 'calc(700px + 1rem + 4.5rem)' }}>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">
               Reps ({visibleReps.length})
@@ -1112,7 +1571,7 @@ export function MapPageView({
             </select>
           </div>
           {visibleReps.length > 0 ? (
-            <div className="space-y-1.5 max-h-[600px] overflow-y-auto">
+            <div className="space-y-1.5 flex-1 overflow-y-auto">
               {visibleReps.map((rep) => {
                 const repLocation = getRepLocation(rep);
                 const repAvailability = availability[rep.id] || {};
@@ -1347,7 +1806,7 @@ export function MapPageView({
 
         return (
           <div className="w-full bg-white rounded-lg border border-gray-300 p-6 mt-6">
-            <h3 className="text-lg font-semibold text-navy mb-4">Availability Calendar</h3>
+            <h3 className="text-lg font-semibold text-navy mb-4">Availability Calendar - {selectedRep.name}</h3>
             <div className="space-y-6">
               {weeks.map((week, weekIndex) => (
                 <div key={weekIndex}>
@@ -1428,27 +1887,46 @@ export function MapPageView({
           <h3 className="text-lg font-semibold text-gray-900">
             Available Leads ({allLeadsForRep.length} within 90 miles)
           </h3>
-          {totalLeadsPages > 1 && (
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLeadsPage(prev => Math.max(1, prev - 1))}
-                disabled={leadsPage === 1}
-                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-              >
-                ← Prev
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {leadsPage} of {totalLeadsPages}
-              </span>
-              <button
-                onClick={() => setLeadsPage(prev => Math.min(totalLeadsPages, prev + 1))}
-                disabled={leadsPage === totalLeadsPages}
-                className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-              >
-                Next →
-              </button>
+              <label htmlFor="leadsSort" className="text-sm text-gray-700 whitespace-nowrap">Sort by:</label>
+              <Select value={leadsSortBy} onValueChange={(value) => {
+                setLeadsSortBy(value as 'distance' | 'faraday' | 'think' | 'ef');
+                setLeadsPage(1); // Reset to first page when sorting changes
+              }}>
+                <SelectTrigger id="leadsSort" className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="distance">Distance (Miles)</SelectItem>
+                  <SelectItem value="faraday">Faraday Credit</SelectItem>
+                  <SelectItem value="think">Think Unlimited</SelectItem>
+                  <SelectItem value="ef">EF Score</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
+            {totalLeadsPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLeadsPage(prev => Math.max(1, prev - 1))}
+                  disabled={leadsPage === 1}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {leadsPage} of {totalLeadsPages}
+                </span>
+                <button
+                  onClick={() => setLeadsPage(prev => Math.min(totalLeadsPages, prev + 1))}
+                  disabled={leadsPage === totalLeadsPages}
+                  className="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="space-y-2">
           {paginatedLeads.length === 0 ? (
@@ -1460,40 +1938,45 @@ export function MapPageView({
                 className="p-3 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
               >
                 <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1 grid grid-cols-7 gap-4">
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">Name</div>
-                      <div className="font-medium text-sm text-gray-900">{lead.name}</div>
+                  <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: 'minmax(250px, 1.5fr) minmax(280px, 2fr) 0.8fr 0.8fr 0.8fr' }}>
+                    {/* Stacked Name, Email, Phone */}
+                    <div className="space-y-2">
+                      <div className="flex gap-3">
+                        <div className="text-xs text-gray-500 font-bold w-16 flex-shrink-0">Name:</div>
+                        <div className="font-medium text-sm text-gray-900 whitespace-nowrap">{lead.name}</div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="text-xs text-gray-500 font-bold w-16 flex-shrink-0">Email:</div>
+                        <div className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">{lead.email}</div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="text-xs text-gray-500 font-bold w-16 flex-shrink-0">Phone:</div>
+                        <div className="text-sm text-gray-700 whitespace-nowrap">{lead.phone}</div>
+                      </div>
                     </div>
+                    {/* Address */}
                     <div>
-                      <div className="text-xs text-gray-500 mb-1">Email</div>
-                      <div className="text-sm text-gray-700">{lead.email}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">Phone</div>
-                      <div className="text-sm text-gray-700">{lead.phone}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500 mb-1">Address</div>
-                      <div className="text-sm text-gray-700">
+                      <div className="text-xs text-gray-500 font-bold mb-1">Address</div>
+                      <div className="text-sm text-gray-700 whitespace-nowrap overflow-hidden text-ellipsis">
                         {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
                       </div>
                     </div>
+                    {/* Credit fields in separate columns */}
                     {lead.faradayCreditPropensity !== undefined && (
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">Faraday Credit</div>
+                        <div className="text-xs text-gray-500 font-bold mb-1">Faraday Credit</div>
                         <div className="text-sm text-gray-700">{lead.faradayCreditPropensity}/100</div>
                       </div>
                     )}
                     {lead.thinkUnlimitedScore && (
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">Think Unlimited</div>
+                        <div className="text-xs text-gray-500 font-bold mb-1">Think Unlimited</div>
                         <div className="text-sm text-gray-700">{lead.thinkUnlimitedScore}</div>
                       </div>
                     )}
                     {lead.efScore !== undefined && (
                       <div>
-                        <div className="text-xs text-gray-500 mb-1">EF Score</div>
+                        <div className="text-xs text-gray-500 font-bold mb-1">EF Score</div>
                         <div className="text-sm text-gray-700">{lead.efScore}</div>
                       </div>
                     )}
@@ -1503,6 +1986,16 @@ export function MapPageView({
                       <div className="text-lg font-bold text-navy">{lead.distance.toFixed(1)}</div>
                       <div className="text-xs text-gray-500">miles</div>
                     </div>
+                    <button
+                      onClick={() => {
+                        // Placeholder: Will open Salesforce lead record in new window
+                        // TODO: Replace with actual Salesforce URL when available
+                        window.open('#', '_blank');
+                      }}
+                      className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors"
+                    >
+                      Salesforce Lead
+                    </button>
                     <button
                       onClick={() => handleScheduleClick(lead)}
                       className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors"

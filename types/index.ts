@@ -51,7 +51,7 @@ export interface Appointment {
 export interface AnchorPoint {
   lat: number;
   lng: number;
-  source: 'home' | 'appointment';
+  source: 'home' | 'previous-appointment' | 'next-appointment';
   address: Address;
 }
 
@@ -90,5 +90,12 @@ export interface Lead {
   faradayCreditPropensity?: number; // 1-100
   thinkUnlimitedScore?: 'Platinum' | 'Gold' | 'Silver' | 'Bronze';
   efScore?: number; // 0, 1, or range 640-800
+  leadSource?: 'Referral' | 'Affiliate';
+  leadSourceDetails?: string; // Specific source details based on leadSource
+  // Referral-specific fields
+  refererName?: string; // Name of the person who referred this lead
+  refererPhone?: string; // Phone number of the referer
+  refererAddress?: Address; // Address of the referer
+  refererRelationship?: 'Friend' | 'Family'; // Relationship to the lead
 }
 

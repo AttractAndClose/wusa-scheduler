@@ -50,26 +50,45 @@ function getRepAnchorPoint(
     apt => TIME_SLOT_ORDER[apt.timeSlot] < TIME_SLOT_ORDER[timeSlot]
   );
   
-  if (earlierAppointments.length === 0) {
-    // No earlier appointments, use home address
+  // Find appointments after this time slot
+  const laterAppointments = todaysAppointments.filter(
+    apt => TIME_SLOT_ORDER[apt.timeSlot] > TIME_SLOT_ORDER[timeSlot]
+  );
+  
+  // Priority 1: Use the latest earlier appointment if available
+  if (earlierAppointments.length > 0) {
+    const latestAppointment = earlierAppointments.sort(
+      (a, b) => TIME_SLOT_ORDER[b.timeSlot] - TIME_SLOT_ORDER[a.timeSlot]
+    )[0];
+    
     return {
-      lat: rep.startingAddress.lat,
-      lng: rep.startingAddress.lng,
-      source: 'home',
-      address: rep.startingAddress
+      lat: latestAppointment.address.lat,
+      lng: latestAppointment.address.lng,
+      source: 'previous-appointment',
+      address: latestAppointment.address
     };
   }
   
-  // Use the latest earlier appointment
-  const latestAppointment = earlierAppointments.sort(
-    (a, b) => TIME_SLOT_ORDER[b.timeSlot] - TIME_SLOT_ORDER[a.timeSlot]
-  )[0];
+  // Priority 2: Use the earliest later appointment if available
+  if (laterAppointments.length > 0) {
+    const earliestAppointment = laterAppointments.sort(
+      (a, b) => TIME_SLOT_ORDER[a.timeSlot] - TIME_SLOT_ORDER[b.timeSlot]
+    )[0];
+    
+    return {
+      lat: earliestAppointment.address.lat,
+      lng: earliestAppointment.address.lng,
+      source: 'next-appointment',
+      address: earliestAppointment.address
+    };
+  }
   
+  // No earlier or later appointments, use home address
   return {
-    lat: latestAppointment.address.lat,
-    lng: latestAppointment.address.lng,
-    source: 'appointment',
-    address: latestAppointment.address
+    lat: rep.startingAddress.lat,
+    lng: rep.startingAddress.lng,
+    source: 'home',
+    address: rep.startingAddress
   };
 }
 

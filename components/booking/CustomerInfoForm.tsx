@@ -22,6 +22,9 @@ interface CustomerInfo {
   email?: string;
   phone?: string;
   address?: Address;
+  faradayCreditPropensity?: string;
+  thinkUnlimitedScore?: string;
+  efScore?: string;
 }
 
 interface CustomerInfoFormProps {
@@ -34,6 +37,9 @@ interface CustomerInfoFormProps {
     email?: string;
     phone?: string;
     address?: string;
+    faradayCreditPropensity?: string;
+    thinkUnlimitedScore?: string;
+    efScore?: string;
   };
   onCustomerInfoChange?: (info: {
     leadId?: string;
@@ -41,6 +47,9 @@ interface CustomerInfoFormProps {
     lastName?: string;
     email?: string;
     phone?: string;
+    faradayCreditPropensity?: string;
+    thinkUnlimitedScore?: string;
+    efScore?: string;
   }) => void;
   isReadOnly?: boolean;
 }
@@ -52,6 +61,9 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
   const [email, setEmail] = useState(initialData?.email || '');
   const [phone, setPhone] = useState(initialData?.phone || '');
   const [addressInput, setAddressInput] = useState(initialData?.address || '');
+  const [faradayCreditPropensity, setFaradayCreditPropensity] = useState(initialData?.faradayCreditPropensity || '');
+  const [thinkUnlimitedScore, setThinkUnlimitedScore] = useState(initialData?.thinkUnlimitedScore || '');
+  const [efScore, setEfScore] = useState(initialData?.efScore || '');
   const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -69,9 +81,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
         lastName: lastName || undefined,
         email: email || undefined,
         phone: phone || undefined,
+        faradayCreditPropensity: faradayCreditPropensity || undefined,
+        thinkUnlimitedScore: thinkUnlimitedScore || undefined,
+        efScore: efScore || undefined,
       });
     }
-  }, [leadId, firstName, lastName, email, phone, onCustomerInfoChange]);
+  }, [leadId, firstName, lastName, email, phone, faradayCreditPropensity, thinkUnlimitedScore, efScore, onCustomerInfoChange]);
 
   // Load Google Maps script
   useEffect(() => {
@@ -150,6 +165,9 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
       if (initialData.address !== undefined && initialData.address !== addressInput) {
         setAddressInput(initialData.address);
       }
+      if (initialData.faradayCreditPropensity !== undefined) setFaradayCreditPropensity(initialData.faradayCreditPropensity);
+      if (initialData.thinkUnlimitedScore !== undefined) setThinkUnlimitedScore(initialData.thinkUnlimitedScore);
+      if (initialData.efScore !== undefined) setEfScore(initialData.efScore);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialData]);
@@ -625,7 +643,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             disabled={isLoading || isReadOnly}
             readOnly={isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
           />
         </div>
@@ -641,7 +659,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             disabled={isLoading || isReadOnly}
             readOnly={isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
           />
         </div>
@@ -657,7 +675,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             disabled={isLoading || isReadOnly}
             readOnly={isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
           />
         </div>
@@ -677,7 +695,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             disabled={isLoading || isReadOnly}
             readOnly={isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
           />
         </div>
@@ -693,7 +711,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             disabled={isLoading || isReadOnly}
             readOnly={isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
           />
         </div>
@@ -712,7 +730,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
             readOnly={isReadOnly}
             required={!isReadOnly}
             className={`border-gray-300 focus:border-primary focus:ring-primary text-base ${
-              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none' : ''
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
             }`}
             autoComplete="off"
           />
@@ -740,6 +758,61 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
               {addressError}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Row 3: Faraday Credit Propensity, Think Unlimited Score, EF Score */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="faradayCreditPropensity" className="text-navy">
+            Faraday Credit Propensity
+          </Label>
+          <Input
+            id="faradayCreditPropensity"
+            type="text"
+            placeholder="1-100"
+            value={faradayCreditPropensity}
+            onChange={(e) => setFaradayCreditPropensity(e.target.value)}
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
+            }`}
+          />
+        </div>
+        <div>
+          <Label htmlFor="thinkUnlimitedScore" className="text-navy">
+            Think Unlimited Score
+          </Label>
+          <Input
+            id="thinkUnlimitedScore"
+            type="text"
+            placeholder="Platinum, Gold, Silver, or Bronze"
+            value={thinkUnlimitedScore}
+            onChange={(e) => setThinkUnlimitedScore(e.target.value)}
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
+            }`}
+          />
+        </div>
+        <div>
+          <Label htmlFor="efScore" className="text-navy">
+            EF Score
+          </Label>
+          <Input
+            id="efScore"
+            type="text"
+            placeholder="0, 1, or 640-800"
+            value={efScore}
+            onChange={(e) => setEfScore(e.target.value)}
+            disabled={isLoading || isReadOnly}
+            readOnly={isReadOnly}
+            className={`border-gray-300 focus:border-primary focus:ring-primary ${
+              isReadOnly ? 'bg-gray-50 cursor-not-allowed border-none shadow-none text-gray-900' : ''
+            }`}
+          />
         </div>
       </div>
       

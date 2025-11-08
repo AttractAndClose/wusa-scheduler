@@ -42,3 +42,9 @@ body {
   z-index: 1 !important;
 }
 
+/* Make map tiles grayscale */
+.leaflet-tile-container img {
+  filter: grayscale(100%);
+  -webkit-filter: grayscale(100%);
+}
+
