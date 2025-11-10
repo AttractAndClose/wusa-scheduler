@@ -54,8 +54,6 @@ export function BookingModal({
   const [bookingStep, setBookingStep] = useState<'idle' | 'syncing' | 'synced' | 'converting' | 'converted' | 'creating' | 'created' | 'complete' | 'closing'>('idle');
   const [countdown, setCountdown] = useState(5);
 
-  if (!slot) return null;
-
   // Check for existing appointments at this address
   const checkForDuplicateAppointment = async (address: Address, date: string, timeSlot: string): Promise<string | null> => {
     try {
@@ -85,16 +83,17 @@ export function BookingModal({
   };
 
   const validateQualifyingQuestions = (): string | null => {
-    if (isHomeowner === undefined) return 'Please indicate if they are the homeowner';
-    if (!homeBuiltYear.trim()) return 'Please enter the year the home was built';
-    if (!homeType.trim()) return 'Please select the home type';
-    if (!homeExterior.trim()) return 'Please select the home exterior';
-    if (!estimatedFicoScore.trim()) return 'Please enter the estimated FICO score';
-    if (isHoaMember === undefined) return 'Please indicate if they are part of an HOA';
-    if (!windowsStatus) return 'Please select if windows are original or replaced';
-    if (!numberOfWindows.trim()) return 'Please enter the number of windows';
-    if (!numberOfSlidingDoors.trim()) return 'Please enter the number of sliding glass doors';
-    if (!maritalStatus.trim()) return 'Please select marital status';
+    const q = qualifyingQuestions;
+    if (q.isHomeowner === undefined) return 'Please indicate if they are the homeowner';
+    if (!q.homeBuiltYear?.trim()) return 'Please enter the year the home was built';
+    if (!q.homeType?.trim()) return 'Please select the home type';
+    if (!q.homeExterior?.trim()) return 'Please select the home exterior';
+    if (!q.estimatedFicoScore?.trim()) return 'Please enter the estimated FICO score';
+    if (q.isHoaMember === undefined) return 'Please indicate if they are part of an HOA';
+    if (!q.windowsStatus) return 'Please select if windows are original or replaced';
+    if (!q.numberOfWindows) return 'Please enter the number of windows';
+    if (q.numberOfSlidingDoors === undefined) return 'Please enter the number of sliding glass doors';
+    if (!q.maritalStatus?.trim()) return 'Please select marital status';
     return null;
   };
 
@@ -163,6 +162,9 @@ export function BookingModal({
       return () => clearInterval(timer);
     }
   }, [bookingStep, onConfirm, onClose, onRefresh]);
+
+  // Early return after all hooks
+  if (!slot) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

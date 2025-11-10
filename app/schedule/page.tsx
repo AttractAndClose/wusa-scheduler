@@ -284,13 +284,18 @@ function ScheduleContent() {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
       
+      // Construct address string from lead if available, otherwise use initialAddress
+      const addressString = updatedLead.address
+        ? `${updatedLead.address.street}, ${updatedLead.address.city}, ${updatedLead.address.state} ${updatedLead.address.zip}`
+        : initialAddress;
+      
       const updatedCustomerData = {
         leadId: updatedLead.id,
         firstName: firstName,
         lastName: lastName,
         email: updatedLead.email,
         phone: updatedLead.phone,
-        address: customerInfo.address, // Keep current address string
+        address: addressString,
         faradayCreditPropensity: updatedLead.faradayCreditPropensity?.toString(),
         thinkUnlimitedScore: updatedLead.thinkUnlimitedScore,
         efScore: updatedLead.efScore?.toString(),

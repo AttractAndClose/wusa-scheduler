@@ -57,7 +57,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
               <Label htmlFor="opening" className="font-semibold text-navy cursor-pointer">Opening (30 seconds)</Label>
             </div>
             <p className="text-gray-700 leading-relaxed ml-6">
-              "Hi {firstName}, this is [Your Name] from Windows USA. I'm calling because you recently expressed interest in learning more about our window replacement services. Is now a good time to talk for about 5 minutes?"
+              &quot;Hi {firstName}, this is [Your Name] from Windows USA. I&apos;m calling because you recently expressed interest in learning more about our window replacement services. Is now a good time to talk for about 5 minutes?&quot;
             </p>
           </div>
 
@@ -71,7 +71,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('homeownerStatus', checked === true)}
                 />
                 <Label htmlFor="homeownerStatus" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>1. Homeowner Status:</strong> "First, I want to make sure I'm speaking with the homeowner. Are you the owner of the property?"
+                  <strong>1. Homeowner Status:</strong> &quot;First, I want to make sure I&apos;m speaking with the homeowner. Are you the owner of the property?&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -81,7 +81,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('homeDetails', checked === true)}
                 />
                 <Label htmlFor="homeDetails" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>2. Home Details:</strong> "Great! Can you tell me a bit about your home? What year was it built, and what type of home is it?"
+                  <strong>2. Home Details:</strong> &quot;Great! Can you tell me a bit about your home? What year was it built, and what type of home is it?&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -91,7 +91,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('windowCondition', checked === true)}
                 />
                 <Label htmlFor="windowCondition" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>3. Window Condition:</strong> "Are the windows in your home original, or have they been replaced before?"
+                  <strong>3. Window Condition:</strong> &quot;Are the windows in your home original, or have they been replaced before?&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -101,7 +101,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('scope', checked === true)}
                 />
                 <Label htmlFor="scope" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>4. Scope:</strong> "How many windows are you looking to replace? And do you have any sliding glass doors that need attention?"
+                  <strong>4. Scope:</strong> &quot;How many windows are you looking to replace? And do you have any sliding glass doors that need attention?&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -111,7 +111,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('hoa', checked === true)}
                 />
                 <Label htmlFor="hoa" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>5. HOA:</strong> "Are you part of a homeowners association? Sometimes they have specific requirements we need to be aware of."
+                  <strong>5. HOA:</strong> &quot;Are you part of a homeowners association? Sometimes they have specific requirements we need to be aware of.&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -121,7 +121,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('timeline', checked === true)}
                 />
                 <Label htmlFor="timeline" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>6. Timeline:</strong> "What's your timeline for this project? Are you looking to move forward in the next few weeks or months?"
+                  <strong>6. Timeline:</strong> &quot;What&apos;s your timeline for this project? Are you looking to move forward in the next few weeks or months?&quot;
                 </Label>
               </div>
             </div>
@@ -137,7 +137,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
               <Label htmlFor="valueProposition" className="font-semibold text-navy cursor-pointer">Value Proposition (1-2 minutes)</Label>
             </div>
             <p className="text-gray-700 leading-relaxed ml-6">
-              "Based on what you've told me, I think we can help. Our windows are energy-efficient, can reduce your utility bills, and increase your home's value. We offer free, no-obligation consultations where one of our specialists will come to your home, take measurements, and provide you with a detailed quote."
+              &quot;Based on what you&apos;ve told me, I think we can help. Our windows are energy-efficient, can reduce your utility bills, and increase your home&apos;s value. We offer free, no-obligation consultations where one of our specialists will come to your home, take measurements, and provide you with a detailed quote.&quot;
             </p>
           </div>
 
@@ -151,7 +151,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('objectionThink', checked === true)}
                 />
                 <Label htmlFor="objectionThink" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>"I need to think about it":</strong> "I completely understand. That's why we offer a free consultation with no obligation. It's just an opportunity to see what's possible and get accurate pricing. Would you be open to that?"
+                  <strong>&quot;I need to think about it&quot;:</strong> &quot;I completely understand. That&apos;s why we offer a free consultation with no obligation. It&apos;s just an opportunity to see what&apos;s possible and get accurate pricing. Would you be open to that?&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -161,7 +161,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('objectionExpensive', checked === true)}
                 />
                 <Label htmlFor="objectionExpensive" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>"It's too expensive":</strong> "I hear you. Many of our customers are surprised to learn about our financing options and the long-term energy savings. The consultation is free, and there's no pressure - just information."
+                  <strong>&quot;It&apos;s too expensive&quot;:</strong> &quot;I hear you. Many of our customers are surprised to learn about our financing options and the long-term energy savings. The consultation is free, and there&apos;s no pressure - just information.&quot;
                 </Label>
               </div>
               <div className="flex items-start gap-2">
@@ -171,7 +171,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
                   onCheckedChange={(checked) => handleCheckChange('objectionNotReady', checked === true)}
                 />
                 <Label htmlFor="objectionNotReady" className="leading-relaxed cursor-pointer flex-1">
-                  <strong>"I'm not ready yet":</strong> "That's perfectly fine. Our consultations are valid for 6 months, so even if you're planning ahead, it's good to have the information when you're ready."
+                  <strong>&quot;I&apos;m not ready yet&quot;:</strong> &quot;That&apos;s perfectly fine. Our consultations are valid for 6 months, so even if you&apos;re planning ahead, it&apos;s good to have the information when you&apos;re ready.&quot;
                 </Label>
               </div>
             </div>
@@ -187,7 +187,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
               <Label htmlFor="closing" className="font-semibold text-navy cursor-pointer">Closing for Appointment (1 minute)</Label>
             </div>
             <p className="text-gray-700 leading-relaxed ml-6">
-              "Perfect! I have some availability this week. Would you prefer a morning, afternoon, or evening appointment? We can schedule something that works with your schedule. The consultation typically takes about 45 minutes, and our specialist will answer all your questions and provide you with a detailed estimate."
+              &quot;Perfect! I have some availability this week. Would you prefer a morning, afternoon, or evening appointment? We can schedule something that works with your schedule. The consultation typically takes about 45 minutes, and our specialist will answer all your questions and provide you with a detailed estimate.&quot;
             </p>
           </div>
 
@@ -201,7 +201,7 @@ export function CallScript({ customerName = 'the customer' }: CallScriptProps) {
               <Label htmlFor="confirmation" className="font-semibold text-navy cursor-pointer">Confirmation</Label>
             </div>
             <p className="text-gray-700 leading-relaxed ml-6">
-              "Great! I have you scheduled for [Date] at [Time]. Our specialist, [Rep Name], will call you the day before to confirm. Is there anything specific you'd like them to focus on during the visit?"
+              &quot;Great! I have you scheduled for [Date] at [Time]. Our specialist, [Rep Name], will call you the day before to confirm. Is there anything specific you&apos;d like them to focus on during the visit?&quot;
             </p>
           </div>
 

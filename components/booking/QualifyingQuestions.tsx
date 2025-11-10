@@ -156,8 +156,8 @@ export function QualifyingQuestions({ onDataChange, initialData, disabled = fals
         <Label htmlFor="qual-homeType" className="text-sm font-medium w-32 flex-shrink-0">
           Home Type <span className="text-red-500">*</span>
         </Label>
-        <Select value={homeType} onValueChange={setHomeType} disabled={disabled} className="flex-1">
-          <SelectTrigger>
+        <Select value={homeType} onValueChange={setHomeType} disabled={disabled}>
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Select type" />
           </SelectTrigger>
           <SelectContent>
@@ -176,8 +176,8 @@ export function QualifyingQuestions({ onDataChange, initialData, disabled = fals
         <Label htmlFor="qual-homeExterior" className="text-sm font-medium w-32 flex-shrink-0">
           Home Exterior <span className="text-red-500">*</span>
         </Label>
-        <Select value={homeExterior} onValueChange={setHomeExterior} disabled={disabled} className="flex-1">
-          <SelectTrigger>
+        <Select value={homeExterior} onValueChange={setHomeExterior} disabled={disabled}>
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Select exterior" />
           </SelectTrigger>
           <SelectContent>
@@ -197,8 +197,8 @@ export function QualifyingQuestions({ onDataChange, initialData, disabled = fals
         <Label htmlFor="qual-estimatedFicoScore" className="text-sm font-medium w-32 flex-shrink-0">
           Est. FICO Score <span className="text-red-500">*</span>
         </Label>
-        <Select value={estimatedFicoScore} onValueChange={setEstimatedFicoScore} disabled={disabled} className="flex-1">
-          <SelectTrigger>
+        <Select value={estimatedFicoScore} onValueChange={setEstimatedFicoScore} disabled={disabled}>
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Select score range" />
           </SelectTrigger>
           <SelectContent>
@@ -343,8 +343,8 @@ export function QualifyingQuestions({ onDataChange, initialData, disabled = fals
         <Label htmlFor="qual-maritalStatus" className="text-sm font-medium w-32 flex-shrink-0">
           Marital Status <span className="text-red-500">*</span>
         </Label>
-        <Select value={maritalStatus} onValueChange={setMaritalStatus} disabled={disabled} className="flex-1">
-          <SelectTrigger>
+        <Select value={maritalStatus} onValueChange={setMaritalStatus} disabled={disabled}>
+          <SelectTrigger className="flex-1">
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
           <SelectContent>
