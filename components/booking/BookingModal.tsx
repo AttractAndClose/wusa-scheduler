@@ -166,6 +166,8 @@ export function BookingModal({
   // Early return after all hooks
   if (!slot) return null;
 
+  const date = parseISO(slot.date);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -238,8 +240,6 @@ export function BookingModal({
       // Still show demo flow even on error
     }
   };
-
-  const date = parseISO(slot.date);
 
   return (
     <Dialog open={!!slot} onOpenChange={onClose}>

@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import type { Lead } from '@/types';
 
-const LEADS_FILE = path.join(process.cwd(), 'data', 'leads.json');
+const LEADS_FILE = path.join(process.cwd(), 'public', 'data', 'leads.json');
 
 // GET - Get a specific lead by ID
 export async function GET(
