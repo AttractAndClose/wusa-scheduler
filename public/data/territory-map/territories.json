@@ -1,0 +1,21 @@
+[
+  {
+    "id": "territory-1",
+    "name": "North Region",
+    "color": "#FF6B6B",
+    "createdAt": "2025-01-15T10:00:00Z"
+  },
+  {
+    "id": "territory-2",
+    "name": "South Region",
+    "color": "#4ECDC4",
+    "createdAt": "2025-01-15T10:00:00Z"
+  },
+  {
+    "id": "territory-3",
+    "name": "East Region",
+    "color": "#45B7D1",
+    "createdAt": "2025-01-15T10:00:00Z"
+  }
+]
+

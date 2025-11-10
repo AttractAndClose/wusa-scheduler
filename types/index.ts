@@ -46,6 +46,18 @@ export interface Appointment {
   notes?: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   createdAt: string;
+  // Qualifying questions
+  isHomeowner?: boolean;
+  homeBuiltYear?: string;
+  homeType?: string;
+  homeExterior?: string;
+  estimatedFicoScore?: string;
+  isHoaMember?: boolean;
+  windowsStatus?: 'original' | 'replaced';
+  windowsReplacedYear?: string;
+  numberOfWindows?: number;
+  numberOfSlidingDoors?: number;
+  maritalStatus?: string;
 }
 
 export interface AnchorPoint {

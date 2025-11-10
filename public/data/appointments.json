@@ -40715,5 +40715,35 @@
     },
     "status": "scheduled",
     "createdAt": "2025-11-07T20:41:03.498Z"
+  },
+  {
+    "id": "apt-1762796665452",
+    "date": "2025-11-10",
+    "timeSlot": "10am",
+    "customerName": "Maria Ellis",
+    "customerPhone": "470-202-5009",
+    "customerEmail": "mariaellis@gmail.com",
+    "leadId": "lead-rep1-1",
+    "address": {
+      "street": "1473 Church St",
+      "city": "KENNESAW",
+      "state": "GA",
+      "zip": "30144",
+      "lat": 34.0234,
+      "lng": -84.6155
+    },
+    "status": "scheduled",
+    "createdAt": "2025-11-10T17:44:25.452Z",
+    "isHomeowner": true,
+    "homeBuiltYear": "196",
+    "homeType": "single-family",
+    "homeExterior": "vinyl",
+    "estimatedFicoScore": "580-669",
+    "isHoaMember": false,
+    "windowsStatus": "replaced",
+    "windowsReplacedYear": "2020",
+    "numberOfWindows": 5,
+    "numberOfSlidingDoors": 0,
+    "maritalStatus": "single"
   }
 ]

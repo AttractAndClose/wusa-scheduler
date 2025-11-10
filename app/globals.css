@@ -1,9 +1,50 @@
 /* Leaflet map styles - must be imported first */
 @import 'leaflet/dist/leaflet.css';
 
+/* Mapbox GL styles */
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  /* Ensure white checkmark for red checkboxes - Radix UI checkboxes */
+  [data-state="checked"][class*="bg-red"] .text-current,
+  [data-state="checked"].bg-red-500 .text-current,
+  [data-state="checked"].bg-red-600 .text-current,
+  [data-state="checked"].bg-red-700 .text-current,
+  [data-state="checked"].bg-primary .text-current {
+    color: white !important;
+  }
+  
+  /* Ensure white checkmark for red checkboxes - Native HTML checkboxes */
+  /* Use accent-color for red checkboxes to ensure white checkmark */
+  input[type="checkbox"]:checked[class*="bg-red"],
+  input[type="checkbox"]:checked.bg-red-500,
+  input[type="checkbox"]:checked.bg-red-600,
+  input[type="checkbox"]:checked.bg-red-700,
+  input[type="checkbox"]:checked.bg-primary {
+    accent-color: #E11B37;
+    background-color: #E11B37;
+    border-color: #E11B37;
+  }
+  
+  /* For any checkbox with red styling, ensure white checkmark */
+  input[type="checkbox"][class*="text-red"]:checked,
+  input[type="checkbox"][class*="bg-red"]:checked {
+    accent-color: #E11B37;
+    background-color: #E11B37;
+    border-color: #E11B37;
+  }
+}
+
+@layer components {
+  /* Standard: All container and card components should have white backgrounds by default */
+  /* This ensures consistency across the application */
+  /* Card component uses bg-white class directly - see components/ui/card.tsx */
+  /* For any other container elements, ensure they use bg-white class */
+}
 
 :root {
   --background: #EEEEEE;

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser, UserButton, useClerk } from '@clerk/nextjs';
-import { Calendar, Users, Clock, MapPin, FileText, LogOut, BarChart3, Settings, BookOpen, LayoutDashboard } from 'lucide-react';
+import { Calendar, Users, Clock, MapPin, FileText, LogOut, BarChart3, Settings, BookOpen, LayoutDashboard, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsAdmin } from '@/lib/use-admin';
 
@@ -11,6 +11,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Referral Map', href: '/map', icon: MapPin },
+  { name: 'Territory Map', href: '/territory-map', icon: Layers },
   { name: 'Rep Availability', href: '/availability', icon: Users },
   { name: 'Scheduled Appointments', href: '/appointments', icon: Clock },
   { name: 'Serviceable Zip Codes', href: '/serviceable-zips', icon: FileText },

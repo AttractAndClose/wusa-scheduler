@@ -52,12 +52,12 @@ export function SlotCard({ slot, onSelect }: SlotCardProps) {
 
   return (
     <Card
-      className={`p-3 transition-all ${getStatusColor()} ${
+      className={`p-3 transition-all h-full w-full flex flex-col ${getStatusColor()} ${
         isDisabled ? '' : 'hover:shadow-md'
       }`}
       onClick={() => !isDisabled && onSelect(slot)}
     >
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 flex-1">
         {/* Time */}
         <div className="text-sm font-medium text-navy">
           {slot.timeSlot === '10am' ? '10:00 AM' : 
