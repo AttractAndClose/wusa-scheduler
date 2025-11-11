@@ -48,11 +48,13 @@ export function ConnectorsSection({ onConnect }: ConnectorsSectionProps) {
 
   const handleConnect = async (provider: ConnectionProvider, type: 'global' | 'user') => {
     try {
-      const endpoint = type === 'global' 
-        ? `/api/ai/connections/global/${provider}/connect`
-        : `/api/ai/connections/user/${provider}/connect`;
+      const endpoint = `/api/ai/connections/${provider}/connect`;
       
-      const res = await fetch(endpoint, { method: 'POST' });
+      const res = await fetch(endpoint, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.authUrl) {
@@ -75,7 +77,7 @@ export function ConnectorsSection({ onConnect }: ConnectorsSectionProps) {
     }
 
     try {
-      const res = await fetch(`/api/ai/connections/${connectionId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/ai/connections/connection/${connectionId}`, { method: 'DELETE' });
       if (res.ok) {
         await loadConnections();
         onConnect?.();

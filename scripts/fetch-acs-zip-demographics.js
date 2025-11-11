@@ -8,7 +8,7 @@
  * Notes:
  *  - Requires CENSUS_API_KEY in environment.
  *  - This can generate a very large file (hundreds of MB). Be mindful of disk space.
- *  - Uses chunking to respect URL length limits and API rate limits.
+ *  - Uses parallel requests with controlled concurrency for speed.
  *  - Writes incrementally to avoid memory issues.
  */
 import fs from 'fs/promises';
@@ -23,36 +23,42 @@ const API_KEY = process.env.CENSUS_API_KEY;
 
 // Tuning knobs
 const MAX_VARS_PER_CALL = 40; // keep URLs under limits
-const PAUSE_MS_BETWEEN_CALLS = 250; // be polite to the API
+const CONCURRENT_REQUESTS = 10; // parallel requests for speed
 const TEMP_DIR = path.join(os.tmpdir(), 'census-fetch');
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function fetchJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`HTTP ${res.status} for ${url}\n${text}`);
+async function fetchJson(url, retries = 3) {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status === 429 && attempt < retries - 1) {
+          // Rate limited - wait longer and retry
+          await sleep(2000 * (attempt + 1));
+          continue;
+        }
+        const text = await res.text().catch(() => '');
+        throw new Error(`HTTP ${res.status} for ${url}\n${text}`);
+      }
+      return res.json();
+    } catch (err) {
+      if (attempt === retries - 1) throw err;
+      await sleep(1000 * (attempt + 1));
+    }
   }
-  return res.json();
 }
 
 async function getAllVariables() {
   const url = `${API_ROOT}/${YEAR}/${DATASET}/variables.json`;
   const payload = await fetchJson(url);
-  // payload.variables is an object: { varName: { label, concept, ... }, ... }
   return payload.variables || {};
 }
 
 function filterVariableNames(variablesObj) {
   const names = Object.keys(variablesObj);
-  // Keep only numeric table variables and geography fields needed.
-  // Exclude predicate-only fields and annotations that are not numeric (e.g., "GEO_ID", "NAME")
-  // The ACS uses suffixes:
-  //  - _001E (estimate), _001M (MOE). We'll include both to satisfy "every data point".
-  // Geography fields required: "zip code tabulation area"
   const excluded = new Set([
     'GEO_ID',
     'NAME',
@@ -76,17 +82,12 @@ function filterVariableNames(variablesObj) {
     'county subdivision',
     'state legislative district (upper chamber)',
     'state legislative district (lower chamber)',
-    'zip code tabulation area', // we don't request it as a "get" variable; it's in 'for='
+    'zip code tabulation area',
   ]);
 
   return names.filter((n) => {
     if (excluded.has(n)) return false;
-    // Keep B*, C* tables and numeric aggregates. Many valid ACS var names start with letters.
-    // Exclude annotations ending in "A", "EA", "MA", etc. Keep E (estimate) and M (MOE).
-    // Variables often look like B01001_001E, B01001_001M
-    // Keep if ends with E or M, or looks numeric without suffix (e.g., some totals).
-    if (/_\d{3}[EM]$/.test(n)) return true; // common ACS pattern
-    // Some variables are simple aggregates like B00001e1 in other datasets; be permissive:
+    if (/_\d{3}[EM]$/.test(n)) return true;
     if (/^[A-Z]\w+$/.test(n) && !/[a-z]$/.test(n)) return true;
     return false;
   });
@@ -113,7 +114,7 @@ function parseTable(headers, rows) {
     throw new Error('headers missing "zip code tabulation area"');
   }
   const headerToIndex = new Map(headers.map((h, i) => [h, i]));
-  const out = new Map(); // zip -> rowData
+  const out = new Map();
   for (const row of rows) {
     const zip = row[zipIdx];
     if (!zip) continue;
@@ -125,7 +126,6 @@ function parseTable(headers, rows) {
       if (val === null || val === 'null' || val === '-666666666' || val === '-999999') {
         continue;
       }
-      // Cast to number when appropriate
       const num = Number(val);
       current[h] = Number.isFinite(num) ? num : val;
     }
@@ -139,11 +139,74 @@ async function ensureDir(dirPath) {
 }
 
 /**
+ * Process a single chunk and write to temp file
+ */
+async function processChunk(chunk, chunkIndex) {
+  const url = buildDataUrl(chunk);
+  try {
+    const json = await fetchJson(url);
+    const [headers, ...rows] = json;
+    const parsed = parseTable(headers, rows);
+
+    const tempFile = path.join(TEMP_DIR, `chunk-${chunkIndex}.json`);
+    const tempObj = {};
+    for (const [zip, data] of parsed.entries()) {
+      tempObj[zip] = data;
+    }
+    await fs.writeFile(tempFile, JSON.stringify(tempObj), 'utf-8');
+    return { success: true, tempFile, zipCount: parsed.size };
+  } catch (err) {
+    console.error(`Chunk ${chunkIndex} failed:`, err.message);
+    return { success: false, tempFile: null, zipCount: 0 };
+  }
+}
+
+/**
+ * Process chunks in parallel with controlled concurrency
+ */
+async function processChunksParallel(chunks) {
+  const results = [];
+  const tempFiles = [];
+  let processed = 0;
+  let allZips = new Set();
+
+  // Process in batches of CONCURRENT_REQUESTS
+  for (let i = 0; i < chunks.length; i += CONCURRENT_REQUESTS) {
+    const batch = chunks.slice(i, i + CONCURRENT_REQUESTS);
+    const batchPromises = batch.map((chunk, batchIdx) => 
+      processChunk(chunk, i + batchIdx)
+    );
+
+    const batchResults = await Promise.all(batchPromises);
+    
+    for (const result of batchResults) {
+      if (result.success && result.tempFile) {
+        tempFiles.push(result.tempFile);
+        allZips.add(result.zipCount); // Track that we got data
+      }
+      results.push(result);
+    }
+
+    processed += batch.length;
+    if (processed % 50 === 0 || processed === chunks.length) {
+      console.log(`Processed ${processed}/${chunks.length} chunks...`);
+    }
+
+    // Small delay between batches to be polite
+    if (i + CONCURRENT_REQUESTS < chunks.length) {
+      await sleep(100);
+    }
+  }
+
+  return { tempFiles, allZips };
+}
+
+/**
  * Merge multiple JSON files containing ZIP code data into a single object.
- * Each file should be { [zip]: { ...data... }, ... }
  */
 async function mergeJsonFiles(filePaths) {
   const merged = {};
+  let processed = 0;
   for (const filePath of filePaths) {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
@@ -151,6 +214,10 @@ async function mergeJsonFiles(filePaths) {
       for (const [zip, zipData] of Object.entries(data)) {
         if (!merged[zip]) merged[zip] = {};
         Object.assign(merged[zip], zipData);
+      }
+      processed++;
+      if (processed % 100 === 0) {
+        console.log(`  Merged ${processed}/${filePaths.length} files...`);
       }
     } catch (err) {
       console.error(`Error reading ${filePath}:`, err.message);
@@ -164,7 +231,7 @@ async function main() {
     throw new Error('Missing CENSUS_API_KEY in environment');
   }
 
-  // Clean up temp directory
+  const startTime = Date.now();
   await ensureDir(TEMP_DIR);
   const tempFiles = [];
 
@@ -176,43 +243,10 @@ async function main() {
     console.log(`Variables discovered: ${allVarNames.length}`);
 
     const chunks = chunkArray(allVarNames, MAX_VARS_PER_CALL);
-    console.log(`Downloading data in ${chunks.length} chunks of up to ${MAX_VARS_PER_CALL} variables each...`);
+    console.log(`Downloading data in ${chunks.length} chunks (${CONCURRENT_REQUESTS} parallel requests)...`);
 
-    let processed = 0;
-    let allZips = new Set();
-
-    // Process chunks and write each to a temp file
-    for (const chunk of chunks) {
-      const url = buildDataUrl(chunk);
-      try {
-        const json = await fetchJson(url);
-        const [headers, ...rows] = json;
-        const parsed = parseTable(headers, rows);
-
-        // Track all ZIPs we've seen
-        for (const zip of parsed.keys()) {
-          allZips.add(zip);
-        }
-
-        // Write this chunk to a temp file
-        const tempFile = path.join(TEMP_DIR, `chunk-${processed}.json`);
-        const tempObj = {};
-        for (const [zip, data] of parsed.entries()) {
-          tempObj[zip] = data;
-        }
-        await fs.writeFile(tempFile, JSON.stringify(tempObj), 'utf-8');
-        tempFiles.push(tempFile);
-
-        processed += 1;
-        if (processed % 10 === 0) {
-          console.log(`Processed ${processed}/${chunks.length} chunks... unique ZIPs: ${allZips.size}`);
-        }
-      } catch (err) {
-        console.error(`Chunk failed (${processed + 1}/${chunks.length}):`, err.message);
-        processed += 1;
-      }
-      await sleep(PAUSE_MS_BETWEEN_CALLS);
-    }
+    const { tempFiles: files } = await processChunksParallel(chunks);
+    tempFiles.push(...files);
 
     console.log(`\nMerging ${tempFiles.length} chunk files...`);
     const merged = await mergeJsonFiles(tempFiles);
@@ -247,17 +281,20 @@ async function main() {
     await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2), 'utf-8');
     console.log(`Wrote variable metadata: ${metadataPath}`);
 
-    // Write data - use streaming write for large files
+    // Write data
     const dataPath = path.resolve(outDir, `zip-demographics-${YEAR}-all.json`);
     console.log(`Writing final data file (this may take a while for large datasets)...`);
     await fs.writeFile(dataPath, JSON.stringify(merged, null, 2), 'utf-8');
     
     const stats = await fs.stat(dataPath);
     const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-    console.log(`Wrote ZIP data for ${Object.keys(merged).length} ZCTAs (${sizeMB} MB): ${dataPath}`);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log(`\n✓ Complete! Wrote ZIP data for ${Object.keys(merged).length} ZCTAs (${sizeMB} MB)`);
+    console.log(`  Total time: ${elapsed}s`);
+    console.log(`  Output: ${dataPath}`);
   } finally {
     // Clean up temp files
-    console.log(`Cleaning up ${tempFiles.length} temporary files...`);
+    console.log(`\nCleaning up ${tempFiles.length} temporary files...`);
     for (const tempFile of tempFiles) {
       try {
         await fs.unlink(tempFile);
