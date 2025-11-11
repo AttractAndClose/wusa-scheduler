@@ -97,7 +97,7 @@ export function createMergedTerritoryBoundaries(
     
     try {
       // Collect all polygons for this territory
-      const polygons: turf.Feature<turf.Polygon>[] = [];
+      const polygons: GeoJSON.Feature<GeoJSON.Polygon>[] = [];
       
       for (const feature of features) {
         if (feature.geometry.type === 'Polygon') {
@@ -140,7 +140,7 @@ export function createMergedTerritoryBoundaries(
       
       // Merge all polygons using union
       // Start with the first polygon
-      let merged: turf.Feature<turf.Polygon | turf.MultiPolygon> = polygons[0];
+      let merged: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon> = polygons[0];
       let successCount = 0;
       
       // Union each subsequent polygon
@@ -152,27 +152,15 @@ export function createMergedTerritoryBoundaries(
           
           const unionResult = turf.union(cleaned1, cleaned2);
           if (unionResult && unionResult.geometry) {
-            merged = unionResult as turf.Feature<turf.Polygon | turf.MultiPolygon>;
+            merged = unionResult as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
             successCount++;
           } else {
             logger.warn(`Union returned null for polygon ${i} in territory ${territoryId}`);
           }
         } catch (e) {
-          // If union fails, try buffer(0) to clean and retry
-          try {
-            const buffered1 = turf.buffer(merged, 0, { units: 'meters' });
-            const buffered2 = turf.buffer(polygons[i], 0, { units: 'meters' });
-            const unionResult = turf.union(buffered1, buffered2);
-            if (unionResult && unionResult.geometry) {
-              merged = unionResult as turf.Feature<turf.Polygon | turf.MultiPolygon>;
-              successCount++;
-            } else {
-              logger.warn(`Buffered union returned null for polygon ${i} in territory ${territoryId}`);
-            }
-          } catch (e2) {
-            logger.warn(`Failed to merge polygon ${i} for territory ${territoryId}:`, e2);
-            // Continue with next polygon - we'll still use what we have
-          }
+          // If union fails, log and continue with next polygon
+          logger.warn(`Failed to merge polygon ${i} for territory ${territoryId}:`, e);
+          // Continue with next polygon - we'll still use what we have
         }
       }
       
@@ -279,10 +267,12 @@ export async function updateZipCodeColors(
   const colorMap = new Map<string, string>();
   const territoryIdMap = new Map<string, string>();
   for (const [zipCode, territoryId] of Object.entries(assignments)) {
-    const territory = territories.find(t => t.id === territoryId);
-    if (territory) {
-      colorMap.set(zipCode, territory.color);
-      territoryIdMap.set(zipCode, territoryId);
+    if (territoryId) {
+      const territory = territories.find(t => t.id === territoryId);
+      if (territory) {
+        colorMap.set(zipCode, territory.color);
+        territoryIdMap.set(zipCode, territoryId);
+      }
     }
   }
 

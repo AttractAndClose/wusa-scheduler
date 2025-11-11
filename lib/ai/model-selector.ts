@@ -114,14 +114,6 @@ export function selectModel(
         };
       }
 
-    case 'vision':
-      return {
-        model: 'gpt-4o',
-        maxTokens: 4000,
-        temperature: 0.3,
-        reasoning: 'auto',
-      };
-
     default:
       return {
         model: 'gpt-4o',
