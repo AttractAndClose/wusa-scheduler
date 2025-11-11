@@ -226,9 +226,11 @@ export default function TerritoryMap({
           // Update colors directly on the loaded GeoJSON (more efficient than re-fetching)
           const colorMap = new Map<string, string>();
           for (const [zipCode, territoryId] of Object.entries(assignmentsData)) {
-            const territory = territoriesData.find(t => t.id === territoryId);
-            if (territory) {
-              colorMap.set(zipCode, territory.color);
+            if (territoryId !== null) {
+              const territory = territoriesData.find(t => t.id === territoryId);
+              if (territory) {
+                colorMap.set(zipCode, territory.color);
+              }
             }
           }
           
@@ -241,7 +243,9 @@ export default function TerritoryMap({
           // Create territory ID map
           const territoryIdMap = new Map<string, string>();
           for (const [zipCode, territoryId] of Object.entries(assignmentsData)) {
-            territoryIdMap.set(zipCode, territoryId);
+            if (territoryId !== null) {
+              territoryIdMap.set(zipCode, territoryId);
+            }
           }
           
           // Process features in batches to avoid blocking the UI
