@@ -1,7 +1,6 @@
 // Client-only presence using BroadcastChannel with a simple heartbeat.
 // This is a best-effort local presence mechanism; for cross-user presence across devices,
 // wire this interface to a realtime service (e.g., Pusher/Ably/Supabase) in the future.
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 type ResourceType = 'rep' | 'lead';
 

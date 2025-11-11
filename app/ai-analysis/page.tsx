@@ -863,7 +863,7 @@ export default function AIAnalysisPage() {
                         </Button>
                         <Button variant="outline" size="sm" className="w-full max-w-full justify-start text-left whitespace-normal break-words h-auto items-start flex-wrap border-blue-600 text-blue-600 hover:bg-blue-50 py-3 px-4"
                           onClick={() => { setCurrentPrompt("Forecast next month's appointment demand by territory using recent trends."); textareaRef.current?.focus(); }}>
-                          Forecast next month's demand
+                          Forecast next month&apos;s demand
                         </Button>
                       </div>
                     </div>
