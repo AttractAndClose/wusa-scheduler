@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Modernize",
+    "leadSource": "",
+    "startDate": "2024-08-01",
+    "avgCostPerLead": 0,
+    "programType": "CPL",
+    "status": "Active",
+    "primaryContact": {
+      "name": "John",
+      "email": "",
+      "phone": "",
+      "title": ""
+    },
+    "offersCredits": false,
+    "notes": [],
+    "id": "partner-1762822019227",
+    "createdAt": "2025-11-11T00:46:59.227Z",
+    "updatedAt": "2025-11-11T00:58:38.213Z"
+  }
+]

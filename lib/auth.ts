@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 
 const ADMIN_ORG_NAME = 'Windows USA';
 const ADMIN_ROLE = 'org:admin';
@@ -25,6 +25,31 @@ export async function isAdmin(): Promise<boolean> {
     }
     
     return false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if the current user's email matches a specific email address
+ * @param allowedEmail - The email address to check against (case-insensitive)
+ * @returns true if user's email matches, false otherwise
+ */
+export async function isAuthorizedEmail(allowedEmail: string): Promise<boolean> {
+  try {
+    const { userId } = await auth();
+    if (!userId) return false;
+    
+    // Get the current user's email from Clerk
+    const user = await currentUser();
+    
+    if (!user) return false;
+    
+    // Check all email addresses (primary and secondary)
+    const userEmails = user.emailAddresses.map(email => email.emailAddress.toLowerCase().trim());
+    const allowedEmailLower = allowedEmail.toLowerCase().trim();
+    
+    return userEmails.includes(allowedEmailLower);
   } catch {
     return false;
   }

@@ -12,9 +12,6 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { getAllServiceableZips } from '@/lib/serviceable-zips';
 import type { ServiceableZip } from '@/types/serviceable-zips';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 function ServiceableZipsContent() {
   const { isLoaded, isSignedIn } = useUser();
   const searchParams = useSearchParams();

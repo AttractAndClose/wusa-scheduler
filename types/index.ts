@@ -46,6 +46,9 @@ export interface Appointment {
   notes?: string;
   status: 'scheduled' | 'completed' | 'cancelled';
   createdAt: string;
+  // Optional outcome details when completed/cancelled
+  appointmentStatus?: string; // e.g. 'No Pitch'
+  reason?: string; // e.g. 'Customer Not Home'
   // Qualifying questions
   isHomeowner?: boolean;
   homeBuiltYear?: string;

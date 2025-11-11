@@ -10,6 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsAdmin } from '@/lib/use-admin';
 import { loadMapSettings, saveMapSettings } from '@/lib/map-settings';
+import { logger } from '@/lib/logger';
+import { Clock } from 'lucide-react';
+import { createPresenceController, type PresenceMap, type PresenceUser } from '@/lib/presence';
+import { useUser } from '@clerk/nextjs';
 
 // Fix for default marker icons in Next.js
 if (typeof window !== 'undefined') {
@@ -384,6 +388,46 @@ export function MapPageView({
 }: MapPageViewProps) {
   const mapRef = useRef<L.Map | null>(null);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const { user } = useUser();
+  // Feature flag to temporarily disable lead presence indicator per performance issue
+  const ENABLE_LEAD_PRESENCE = false;
+  const currentPresenceUser: PresenceUser | null = user
+    ? {
+        userId: user.id,
+        firstName: user.firstName || user.emailAddresses[0]?.emailAddress?.split('@')[0] || 'User',
+        lastName: user.lastName || '',
+      }
+    : null;
+  const [repPresence, setRepPresence] = useState<PresenceMap>({});
+  const [leadPresence, setLeadPresence] = useState<PresenceMap>({});
+  const repPresenceCtrl = useMemo(
+    () => createPresenceController('rep', currentPresenceUser),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentPresenceUser?.userId]
+  );
+  const leadPresenceCtrl = useMemo(
+    () => createPresenceController('lead', currentPresenceUser),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [currentPresenceUser?.userId]
+  );
+  useEffect(() => {
+    const offRep = repPresenceCtrl.onPresence((p) => {
+      setRepPresence(p);
+    });
+    const offLead = ENABLE_LEAD_PRESENCE
+      ? leadPresenceCtrl.onPresence((p) => {
+          setLeadPresence(p);
+        })
+      : () => {};
+    return () => {
+      offRep();
+      offLead();
+      repPresenceCtrl.setActive(null);
+      if (ENABLE_LEAD_PRESENCE) {
+        leadPresenceCtrl.setActive(null);
+      }
+    };
+  }, [repPresenceCtrl, leadPresenceCtrl, ENABLE_LEAD_PRESENCE]);
   
   // Get today's date
   const today = new Date();
@@ -742,8 +786,10 @@ export function MapPageView({
     if (selectedRepId === rep.id) {
       setSelectedRepId(null);
       setLeadsPage(1); // Reset pagination
+      repPresenceCtrl.setActive(null);
     } else {
       setSelectedRepId(rep.id);
+      repPresenceCtrl.setActive(rep.id);
       setLeadsPage(1); // Reset to first page when selecting new rep
       if (mapRef.current) {
         const repLocation = getRepLocation(rep);
@@ -943,8 +989,14 @@ export function MapPageView({
     if (!schedulingLead || !selectedRepId || !selectedDate || !selectedTimeSlot) return;
     
     // TODO: Implement actual scheduling logic
-    // For now, just close the modal
-    console.log('Schedule appointment:', {
+    // This should create an appointment via the appointments API
+    // See: app/api/appointments/route.ts for the API endpoint
+    // Implementation needed:
+    // 1. Call POST /api/appointments with appointment data
+    // 2. Handle success/error responses
+    // 3. Refresh the lead list
+    // 4. Close modal on success
+    logger.info('Schedule appointment:', {
       lead: schedulingLead,
       repId: selectedRepId,
       date: selectedDate,
@@ -1298,16 +1350,135 @@ export function MapPageView({
             const markerColor = lead.leadSourceDetails 
               ? (REFERRAL_COLORS[lead.leadSourceDetails] || '#6B7280') 
               : '#6B7280';
+            if (!ENABLE_LEAD_PRESENCE) {
+              return (
+                <Marker
+                  key={`lead-${lead.id}`}
+                  position={[lead.address.lat, lead.address.lng]}
+                  icon={L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6],
+                  })}
+                >
+                  <Tooltip>
+                    <div className="text-xs font-semibold">{lead.name}</div>
+                  </Tooltip>
+                  <Popup>
+                    <div>
+                      <div className="grid gap-3" style={{ gridTemplateColumns: 'auto auto' }}>
+                        {/* Left Column - Customer Info */}
+                        <div>
+                          <h3 className="text-sm font-semibold text-navy mb-2 pb-1.5 border-b border-gray-200">Customer</h3>
+                          <div className="space-y-1.5">
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Name</div>
+                              <div className="text-xs text-gray-900 break-words">{lead.name}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Email</div>
+                              <div className="text-xs text-gray-900 break-all">{lead.email}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Phone</div>
+                              <div className="text-xs text-gray-900">{lead.phone}</div>
+                            </div>
+                            <div>
+                              <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Address</div>
+                              <div className="text-xs text-gray-900 break-words">
+                                {lead.address.street}<br />
+                                {lead.address.city}, {lead.address.state} {lead.address.zip}
+                              </div>
+                            </div>
+                            {lead.leadSourceDetails && (
+                              <div>
+                                <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Lead Source</div>
+                                <div className="text-xs text-gray-900 break-words">{lead.leadSourceDetails}</div>
+                              </div>
+                            )}
+                            {lead.efScore !== undefined && (
+                              <div>
+                                <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">EF Score</div>
+                                <div className="text-xs text-gray-900">{lead.efScore}</div>
+                              </div>
+                            )}
+                            {selectedRepId && (() => {
+                              const selectedRep = filteredReps.find(rep => rep.id === selectedRepId);
+                              return selectedRep ? (
+                                <div>
+                                  <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Distance</div>
+                                  <div className="text-xs text-gray-900 break-words">{lead.distance.toFixed(1)} mi from {selectedRep.name}</div>
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        </div>
+                        
+                        {/* Right Column - Referrer Info */}
+                        <div>
+                          {lead.refererName ? (
+                            <>
+                              <h3 className="text-sm font-semibold text-navy mb-2 pb-1.5 border-b border-gray-200">Referer</h3>
+                              <div className="space-y-1.5">
+                                <div>
+                                  <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Name</div>
+                                  <div className="text-xs text-gray-900 break-words">{lead.refererName} ({lead.refererRelationship})</div>
+                                </div>
+                                {lead.refererPhone && (
+                                  <div>
+                                    <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Phone</div>
+                                    <div className="text-xs text-gray-900">{lead.refererPhone}</div>
+                                  </div>
+                                )}
+                                {lead.refererAddress && (
+                                  <div>
+                                    <div className="text-[10px] font-medium text-red-600 uppercase tracking-wide mb-0.5">Address</div>
+                                    <div className="text-xs text-gray-900 break-words">
+                                      {lead.refererAddress.street}<br />
+                                      {lead.refererAddress.city}, {lead.refererAddress.state} {lead.refererAddress.zip}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-gray-500 italic">No referrer information</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            }
+            
+            const activeLeadUsers = leadPresence[lead.id]?.users || [];
+            const showPresence = activeLeadUsers.length > 0;
+            const name = showPresence
+              ? `${activeLeadUsers[0].firstName} ${activeLeadUsers[0].lastName}`.trim()
+              : '';
+            const extra = showPresence && activeLeadUsers.length > 1 ? ` +${activeLeadUsers.length - 1}` : '';
+            // Include presence in key so marker re-renders when presence changes
+            const presenceKey = showPresence ? activeLeadUsers.map(u => u.userId).join(',') : '';
             
             return (
               <Marker
-                key={`lead-${lead.id}`}
+                key={`lead-${lead.id}-${presenceKey}`}
                 position={[lead.address.lat, lead.address.lng]}
+                eventHandlers={{
+                  click: () => {
+                    if (ENABLE_LEAD_PRESENCE) leadPresenceCtrl.setActive(lead.id);
+                  }
+                }}
                 icon={L.divIcon({
                   className: 'custom-marker',
-                  html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>`,
-                  iconSize: [12, 12],
-                  iconAnchor: [6, 6],
+                  html: `<div style="position:relative; width:14px; height:14px;">
+                    <div title="${showPresence ? `${name}${extra} is working on this` : ''}" style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.4); position:absolute; left:1px; top:1px;"></div>
+                    ${showPresence ? `<div style="position:absolute; right:-2px; bottom:-2px; width:8px; height:8px; border-radius:9999px; background-color:#F97316; border:1px solid white;"></div>` : ''}
+                  </div>`,
+                  iconSize: [14, 14],
+                  iconAnchor: [7, 7],
                 })}
               >
                 <Tooltip>
@@ -1664,7 +1835,7 @@ export function MapPageView({
                   <div 
                     key={rep.id} 
                     onClick={() => handleRepClick(rep)}
-                    className={`p-3 rounded border cursor-pointer hover:shadow-md transition-shadow ${
+                    className={`p-3 rounded border cursor-pointer hover:shadow-md transition-shadow relative ${
                       isSelected 
                         ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-300' 
                         : isAvailable 
@@ -1693,6 +1864,20 @@ export function MapPageView({
                         </div>
                       )}
                     </div>
+                    {(() => {
+                      const activeUsers = repPresence[rep.id]?.users || [];
+                      if (activeUsers.length === 0) return null;
+                      const name = `${activeUsers[0].firstName} ${activeUsers[0].lastName}`.trim();
+                      const extra = activeUsers.length > 1 ? ` +${activeUsers.length - 1}` : '';
+                      return (
+                        <div className="absolute bottom-2 right-2">
+                          <div className="flex items-center gap-1 rounded bg-orange-500 text-white px-2 py-0.5 text-[10px] shadow">
+                            <Clock className="w-3 h-3" />
+                            <span className="font-medium">{name}{extra}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     
                     {/* Scheduled Appointments */}
                     {(() => {
@@ -1935,7 +2120,7 @@ export function MapPageView({
             paginatedLeads.map((lead) => (
               <div
                 key={lead.id}
-                className="p-3 border border-gray-200 rounded hover:bg-gray-50 transition-colors"
+                className="p-3 border border-gray-200 rounded hover:bg-gray-50 transition-colors relative"
               >
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 grid gap-4" style={{ gridTemplateColumns: 'minmax(250px, 1.5fr) minmax(280px, 2fr) 0.8fr 0.8fr 0.8fr' }}>
@@ -1988,9 +2173,15 @@ export function MapPageView({
                     </div>
                     <button
                       onClick={() => {
-                        // Placeholder: Will open Salesforce lead record in new window
                         // TODO: Replace with actual Salesforce URL when available
-                        window.open('#', '_blank');
+                        // Expected format: https://[instance].salesforce.com/[leadId]
+                        // Consider: Store Salesforce instance URL in environment variable NEXT_PUBLIC_SALESFORCE_INSTANCE
+                        const SALESFORCE_INSTANCE = process.env.NEXT_PUBLIC_SALESFORCE_INSTANCE || '';
+                        const leadId = (lead as any).salesforceId || lead.id;
+                        const salesforceUrl = SALESFORCE_INSTANCE 
+                          ? `${SALESFORCE_INSTANCE}/${leadId}`
+                          : '#';
+                        window.open(salesforceUrl, '_blank');
                       }}
                       className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors"
                     >
@@ -2004,6 +2195,7 @@ export function MapPageView({
                     </button>
                   </div>
                 </div>
+                {/* Lead presence indicator temporarily disabled */}
               </div>
             ))
           )}

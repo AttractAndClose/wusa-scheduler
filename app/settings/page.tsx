@@ -8,15 +8,14 @@ import { useIsAdmin } from '@/lib/use-admin';
 import { Card } from '@/components/ui/card';
 import { Users, MapPin } from 'lucide-react';
 import { loadMapSettings, saveMapSettings, type MapVisibilitySettings } from '@/lib/map-settings';
+import { AISettingsSection } from '@/components/settings/AISettingsSection';
+import { ConnectorsSection } from '@/components/settings/ConnectorsSection';
 
 const REFERRAL_SOURCE_DETAILS = [
   'ReferralBD', 'ReferralEX', 'ReferralNG', 'ReferralPL', 'ReferralSA',
   'ReferralTH', 'ReferralTM', 'ReferralTP', 'ReferralTX', 'ReferralYS',
   'ReferralEX-PLUS'
 ] as const;
-
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
 
 function SettingsContent() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -48,11 +47,7 @@ function SettingsContent() {
     return null;
   }
 
-  // Redirect if not admin
-  if (isLoaded && isSignedIn && !isAdmin) {
-    router.push('/');
-    return null;
-  }
+  // Note: Settings page is accessible to all users, but some sections are admin-only
 
   if (!isLoaded) {
     return (
@@ -251,6 +246,12 @@ function SettingsContent() {
             </div>
           </div>
         </Card>
+
+        {/* AI Analysis Configuration */}
+        <AISettingsSection />
+
+        {/* Connectors */}
+        <ConnectorsSection />
       </div>
     </AppLayout>
   );

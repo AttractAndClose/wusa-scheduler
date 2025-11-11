@@ -6,9 +6,6 @@ import dynamicImport from 'next/dynamic';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { loadReps, getAllAppointments, loadAvailability, loadLeads } from '@/lib/data-loader';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 // Dynamically import MapPageView to avoid SSR issues with Leaflet
 const MapPageView = dynamicImport(() => import('@/components/map/MapPageView').then(mod => ({ default: mod.MapPageView })), {
   ssr: false,

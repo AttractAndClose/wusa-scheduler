@@ -9,7 +9,10 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { getAllAppointments, loadReps, loadAvailability, loadLeads } from '@/lib/data-loader';
 import { calculateDistance } from '@/lib/distance';
 import { getAllServiceableZips } from '@/lib/serviceable-zips';
+import { loadAssignments, loadAffiliatePurchaseZips } from '@/lib/territory-map/dataLoader';
+import { getZipCodeCoordinatesBatch, approximateZipCodeCoordinates } from '@/lib/zip-coordinates';
 import type { Appointment, Lead, SalesRep, Availability, Address, TimeSlot } from '@/types';
+import type { TerritoryAssignment } from '@/types/territory-map';
 import { 
   format, 
   parseISO, 
@@ -29,9 +32,6 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
-
 interface DateRange {
   start: Date;
   end: Date;
@@ -45,7 +45,14 @@ function DashboardContent() {
   const [reps, setReps] = useState<SalesRep[]>([]);
   const [availability, setAvailability] = useState<Availability>({});
   const [serviceableZips, setServiceableZips] = useState<any[]>([]);
+  const [territoryAssignments, setTerritoryAssignments] = useState<TerritoryAssignment>({});
+  const [affiliatePurchaseZips, setAffiliatePurchaseZips] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [zipCodeCoverageData, setZipCodeCoverageData] = useState<{
+    coveredZipCodesCount: number;
+    totalTerritoryZips: number;
+    zipCodeCoverage: number;
+  }>({ coveredZipCodesCount: 0, totalTerritoryZips: 0, zipCodeCoverage: 0 });
   
   // Date filtering state - preset options
   type DatePreset = 'today' | 'tomorrow' | 'next7' | 'next14' | 'next30' | 'next60' | 'next90' | 'thisWeek' | 'nextWeek' | 'thisMonth' | 'nextMonth';
@@ -62,12 +69,14 @@ function DashboardContent() {
     async function loadData() {
       setIsLoading(true);
       try {
-        const [appointmentsData, leadsData, repsData, availabilityData, zipsData] = await Promise.all([
+        const [appointmentsData, leadsData, repsData, availabilityData, zipsData, assignmentsData, affiliateZipsData] = await Promise.all([
           getAllAppointments(),
           loadLeads(),
           loadReps(),
           loadAvailability(),
-          getAllServiceableZips()
+          getAllServiceableZips(),
+          loadAssignments(),
+          loadAffiliatePurchaseZips()
         ]);
 
         setAppointments(appointmentsData);
@@ -75,6 +84,8 @@ function DashboardContent() {
         setReps(repsData);
         setAvailability(availabilityData);
         setServiceableZips(zipsData);
+        setTerritoryAssignments(assignmentsData);
+        setAffiliatePurchaseZips(affiliateZipsData);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -84,6 +95,72 @@ function DashboardContent() {
 
     loadData();
   }, [user, isLoaded, router]);
+
+  // Calculate zip code coverage when reps and territory assignments are loaded
+  useEffect(() => {
+    async function calculateZipCodeCoverage() {
+      if (reps.length === 0 || Object.keys(territoryAssignments).length === 0) {
+        setZipCodeCoverageData({ coveredZipCodesCount: 0, totalTerritoryZips: 0, zipCodeCoverage: 0 });
+        return;
+      }
+
+      const territoryZipCodes = Object.keys(territoryAssignments);
+      const totalTerritoryZips = territoryZipCodes.length;
+      
+      // Get coordinates for all territory zip codes
+      const zipCoordinatesMap = await getZipCodeCoordinatesBatch(territoryZipCodes);
+      
+      // For zip codes without coordinates from boundaries, use approximation
+      const coveredZipCodes = new Set<string>();
+      
+      for (const zipCode of territoryZipCodes) {
+        let coords = zipCoordinatesMap.get(zipCode);
+        
+        // If no coordinates from boundaries, try to get from serviceable zips or approximate
+        if (!coords) {
+          const serviceableZip = serviceableZips.find(z => z.zip === zipCode);
+          if (serviceableZip && serviceableZip.state) {
+            coords = approximateZipCodeCoordinates(zipCode, serviceableZip.state) || undefined;
+          } else {
+            coords = approximateZipCodeCoordinates(zipCode) || undefined;
+          }
+        }
+        
+        if (!coords) {
+          // Skip if we still don't have coordinates
+          continue;
+        }
+        
+        // Check if any rep can cover this zip (within 45 miles of home address)
+        const canCover = reps.some(rep => {
+          const distance = calculateDistance(
+            rep.startingAddress.lat,
+            rep.startingAddress.lng,
+            coords!.lat,
+            coords!.lng
+          );
+          return distance <= 45;
+        });
+        
+        if (canCover) {
+          coveredZipCodes.add(zipCode);
+        }
+      }
+
+      // Calculate coverage percentage
+      const zipCodeCoverage = totalTerritoryZips > 0
+        ? (coveredZipCodes.size / totalTerritoryZips) * 100
+        : 0;
+
+      setZipCodeCoverageData({
+        coveredZipCodesCount: coveredZipCodes.size,
+        totalTerritoryZips,
+        zipCodeCoverage
+      });
+    }
+
+    calculateZipCodeCoverage();
+  }, [reps, territoryAssignments, serviceableZips]);
 
   // Calculate date range based on preset
   const dateRange = useMemo((): DateRange => {
@@ -140,18 +217,18 @@ function DashboardContent() {
     });
   }, [appointments, dateRange]);
 
-  // Total leads: all leads that haven't set an appointment (not filtered by date)
-  const totalLeadsWithoutAppointment = useMemo(() => {
-    // Get all appointment lead IDs
-    const appointmentLeadIds = new Set(
-      appointments
-        .filter(apt => apt.leadId)
-        .map(apt => apt.leadId!)
-    );
-    
-    // Count leads that don't have an appointment
-    return leads.filter(lead => !appointmentLeadIds.has(lead.id)).length;
-  }, [leads, appointments]);
+  // Total leads: all leads (not filtered by date or appointment status)
+  const totalLeads = useMemo(() => {
+    return leads.length;
+  }, [leads]);
+
+  // Leads by source
+  const leadsBySource = useMemo(() => {
+    const referral = leads.filter(l => l.leadSource === 'Referral').length;
+    const affiliate = leads.filter(l => l.leadSource === 'Affiliate').length;
+    const other = leads.filter(l => l.leadSource !== 'Referral' && l.leadSource !== 'Affiliate').length;
+    return { referral, affiliate, other };
+  }, [leads]);
 
   // Calculate distance for appointments (mileage issues)
   const appointmentDistances = useMemo(() => {
@@ -279,11 +356,6 @@ function DashboardContent() {
       converted: leads.filter(l => l.status === 'converted').length
     };
 
-    // Conversion rate (leads to appointments)
-    const conversionRate = totalLeadsWithoutAppointment > 0 
-      ? (totalAppointments / totalLeadsWithoutAppointment) * 100 
-      : 0;
-
     // Rep utilization (appointments per rep)
     const repUtilization = new Map<string, number>();
     filteredAppointments.forEach(apt => {
@@ -295,35 +367,15 @@ function DashboardContent() {
       ? Array.from(repUtilization.values()).reduce((sum, count) => sum + count, 0) / repUtilization.size
       : 0;
 
-    // Covered Zip Codes: count of zip codes where a rep can cover based on home address and 60 miles
-    const coveredZipCodes = new Set<string>();
-    serviceableZips.forEach(zipData => {
-      if (zipData.excluded) return; // Skip excluded zips
-      
-      const zipLat = zipData.lat;
-      const zipLng = zipData.lng;
-      
-      // Check if any rep can cover this zip (within 60 miles of home address)
-      const canCover = reps.some(rep => {
-        const distance = calculateDistance(
-          rep.startingAddress.lat,
-          rep.startingAddress.lng,
-          zipLat,
-          zipLng
-        );
-        return distance <= 60;
-      });
-      
-      if (canCover) {
-        coveredZipCodes.add(zipData.zip);
-      }
-    });
+    // Total Territory Zips: count unique zip codes in territory assignments
+    const totalTerritoryZips = zipCodeCoverageData.totalTerritoryZips || Object.keys(territoryAssignments).length;
 
     // Available appointments: total available slots minus booked appointments
     const availableAppointments = Math.max(0, totalAvailableSlots - scheduledAppointments);
 
     return {
-      totalLeads: totalLeadsWithoutAppointment,
+      totalLeads,
+      leadsBySource,
       totalAppointments,
       scheduledAppointments,
       completedAppointments,
@@ -333,14 +385,16 @@ function DashboardContent() {
       avgDistance,
       appointmentsByTimeSlot,
       leadsByStatus,
-      conversionRate,
       avgAppointmentsPerRep,
-      coveredZipCodesCount: coveredZipCodes.size,
+      coveredZipCodesCount: zipCodeCoverageData.coveredZipCodesCount,
       availableAppointments,
       totalReps: reps.length,
-      activeReps: repUtilization.size
+      activeReps: repUtilization.size,
+      totalTerritoryZips,
+      zipCodeCoverage: zipCodeCoverageData.zipCodeCoverage,
+      affiliatePurchaseZipsCount: affiliatePurchaseZips.length
     };
-  }, [totalLeadsWithoutAppointment, filteredAppointments, appointmentDistances, availability, dateRange, reps, serviceableZips, leads]);
+  }, [totalLeads, leadsBySource, filteredAppointments, appointmentDistances, availability, dateRange, reps, leads, territoryAssignments, affiliatePurchaseZips, zipCodeCoverageData]);
 
   if (isLoading) {
     return (
@@ -389,7 +443,7 @@ function DashboardContent() {
             </div>
           </div>
 
-          {/* Key Metrics Grid */}
+          {/* Top Row: Leads by Source */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Leads */}
             <Card className="p-6 bg-white h-full">
@@ -399,6 +453,65 @@ function DashboardContent() {
                   <p className="text-3xl font-bold text-navy mt-2">{metrics.totalLeads.toLocaleString()}</p>
                 </div>
                 <Users className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Referral Leads */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Referral Leads</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.leadsBySource.referral.toLocaleString()}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Affiliate Leads */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Affiliate Leads</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.leadsBySource.affiliate.toLocaleString()}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Other Leads */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Other Leads</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.leadsBySource.other.toLocaleString()}</p>
+                </div>
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+          </div>
+
+          {/* Second Row: Reps and Appointments */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Reps */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Total Reps</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.totalReps.toLocaleString()}</p>
+                  <p className="text-xs text-navy/60 mt-1">{metrics.activeReps} active</p>
+                </div>
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Available Appointments */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Available Appointments</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.availableAppointments.toLocaleString()}</p>
+                </div>
+                <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
             </Card>
 
@@ -415,18 +528,7 @@ function DashboardContent() {
               </Card>
             </Link>
 
-            {/* Available Appointments */}
-            <Card className="p-6 bg-white h-full">
-              <div className="flex items-center justify-between h-full">
-                <div>
-                  <p className="text-sm text-navy/70">Available Appointments</p>
-                  <p className="text-3xl font-bold text-navy mt-2">{metrics.availableAppointments.toLocaleString()}</p>
-                </div>
-                <CheckCircle className="h-8 w-8 text-green-600" />
-              </div>
-            </Card>
-
-            {/* Fulfilment Rate */}
+            {/* Fulfillment % */}
             <Card className="p-6 bg-white h-full">
               <div className="flex items-center justify-between h-full">
                 <div>
@@ -438,58 +540,61 @@ function DashboardContent() {
             </Card>
           </div>
 
-          {/* Secondary Metrics Grid */}
+          {/* Third Row: Territory and Coverage */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Territory Zips */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Total Territory Zips</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.totalTerritoryZips.toLocaleString()}</p>
+                </div>
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Affiliate Purchase Zips */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Affiliate Purchase Zips</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.affiliatePurchaseZipsCount.toLocaleString()}</p>
+                  <p className="text-xs text-navy/60 mt-1">
+                    {metrics.affiliatePurchaseZipsCount.toLocaleString()} of {metrics.totalTerritoryZips.toLocaleString()} {metrics.totalTerritoryZips > 0 ? ((metrics.affiliatePurchaseZipsCount / metrics.totalTerritoryZips) * 100).toFixed(1) : 0}%
+                  </p>
+                </div>
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
+            {/* Rep Zip Code Coverage */}
+            <Card className="p-6 bg-white h-full">
+              <div className="flex items-center justify-between h-full">
+                <div>
+                  <p className="text-sm text-navy/70">Rep Zip Code Coverage</p>
+                  <p className="text-3xl font-bold text-navy mt-2">{metrics.zipCodeCoverage.toFixed(1)}%</p>
+                  <p className="text-xs text-navy/60 mt-1">{metrics.coveredZipCodesCount.toLocaleString()} of {metrics.totalTerritoryZips.toLocaleString()}</p>
+                </div>
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+            </Card>
+
             {/* Mileage Issues */}
             <Link href="/appointments?mileageIssues=true" className="h-full">
               <Card className="p-6 bg-white hover:shadow-lg transition-shadow cursor-pointer h-full">
                 <div className="flex items-center justify-between h-full">
                   <div>
-                    <p className="text-sm text-navy/70">Mileage Issues (≥60mi)</p>
+                    <p className="text-sm text-navy/70">Mileage Issues</p>
                     <p className="text-3xl font-bold text-red-600 mt-2">{metrics.appointmentsWithMileageIssues.toLocaleString()}</p>
                   </div>
                   <AlertTriangle className="h-8 w-8 text-red-600" />
                 </div>
               </Card>
             </Link>
-
-            {/* Total Reps */}
-            <Card className="p-6 bg-white h-full">
-              <div className="flex items-center justify-between h-full">
-                <div>
-                  <p className="text-sm text-navy/70">Total Reps</p>
-                  <p className="text-3xl font-bold text-navy mt-2">{metrics.totalReps.toLocaleString()}</p>
-                  <p className="text-xs text-navy/60 mt-1">{metrics.activeReps} active</p>
-                </div>
-                <Users className="h-8 w-8 text-primary" />
-              </div>
-            </Card>
-
-            {/* Covered Zip Codes */}
-            <Card className="p-6 bg-white h-full">
-              <div className="flex items-center justify-between h-full">
-                <div>
-                  <p className="text-sm text-navy/70">Covered Zip Codes</p>
-                  <p className="text-3xl font-bold text-navy mt-2">{metrics.coveredZipCodesCount.toLocaleString()}</p>
-                </div>
-                <MapPin className="h-8 w-8 text-primary" />
-              </div>
-            </Card>
-
-            {/* Conversion Rate */}
-            <Card className="p-6 bg-white h-full">
-              <div className="flex items-center justify-between h-full">
-                <div>
-                  <p className="text-sm text-navy/70">Lead Conversion Rate</p>
-                  <p className="text-3xl font-bold text-navy mt-2">{metrics.conversionRate.toFixed(1)}%</p>
-                </div>
-                <Target className="h-8 w-8 text-primary" />
-              </div>
-            </Card>
           </div>
 
           {/* Detailed Metrics */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Appointments by Time Slot */}
             <Card className="p-6 bg-white">
               <h3 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
@@ -508,32 +613,6 @@ function DashboardContent() {
                 <div className="flex items-center justify-between">
                   <span className="text-navy">7:00 PM</span>
                   <span className="text-lg font-semibold text-navy">{metrics.appointmentsByTimeSlot['7pm']}</span>
-                </div>
-              </div>
-            </Card>
-
-            {/* Leads by Status */}
-            <Card className="p-6 bg-white">
-              <h3 className="text-lg font-semibold text-navy mb-4 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Leads by Status
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-navy">New</span>
-                  <span className="text-lg font-semibold text-navy">{metrics.leadsByStatus.new}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-navy">Contacted</span>
-                  <span className="text-lg font-semibold text-navy">{metrics.leadsByStatus.contacted}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-navy">Qualified</span>
-                  <span className="text-lg font-semibold text-navy">{metrics.leadsByStatus.qualified}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-navy">Converted</span>
-                  <span className="text-lg font-semibold text-green-600">{metrics.leadsByStatus.converted}</span>
                 </div>
               </div>
             </Card>

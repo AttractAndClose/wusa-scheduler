@@ -15,9 +15,6 @@ import { format, parseISO, startOfWeek, addWeeks, addDays, startOfDay, isBefore 
 import type { SalesRep, Appointment, Availability, TimeSlot, Address, AvailableRep, Lead } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 const TIME_SLOTS: TimeSlot[] = ['10am', '2pm', '7pm'];
 const DAYS: (keyof Availability[string])[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 

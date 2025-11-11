@@ -3,7 +3,8 @@ import type {
   TerritoryAssignment, 
   Representative, 
   ZipCodeMetadata, 
-  FunnelData 
+  FunnelData,
+  AffiliateFunnelData
 } from '@/types/territory-map';
 import type { SalesRep } from '@/types';
 
@@ -16,6 +17,7 @@ let cachedAssignments: TerritoryAssignment | null = null;
 let cachedRepresentatives: Representative[] | null = null;
 let cachedZipCodeMetadata: ZipCodeMetadata | null = null;
 let cachedFunnelData: FunnelData[] | null = null;
+let cachedAffiliateFunnelData: AffiliateFunnelData[] | null = null;
 
 export async function loadTerritories(): Promise<Territory[]> {
   if (cachedTerritories) {
@@ -72,7 +74,7 @@ export async function loadRepresentatives(): Promise<Representative[]> {
       cache: 'no-store'
     });
     
-    // If not found, load from existing reps.json and convert
+    // If not found or empty, load from existing reps.json and convert
     if (!response.ok) {
       response = await fetch('/data/reps.json', {
         cache: 'no-store'
@@ -102,8 +104,36 @@ export async function loadRepresentatives(): Promise<Representative[]> {
       return representatives;
     }
     
-    // Use territory-map specific file if it exists
+    // Use territory-map specific file if it exists and has data
     const data = await response.json();
+    
+    // If the array is empty, fall back to reps.json
+    if (Array.isArray(data) && data.length === 0) {
+      response = await fetch('/data/reps.json', {
+        cache: 'no-store'
+      });
+      
+      if (response.ok) {
+        // Convert SalesRep format to Representative format
+        const salesReps: SalesRep[] = await response.json();
+        const representatives: Representative[] = salesReps.map(rep => ({
+          id: rep.id,
+          name: rep.name,
+          email: rep.email,
+          phone: rep.phone,
+          location: {
+            lat: rep.startingAddress.lat,
+            lng: rep.startingAddress.lng
+          },
+          territoryId: null,
+          active: true
+        }));
+        
+        cachedRepresentatives = representatives;
+        return representatives;
+      }
+    }
+    
     cachedRepresentatives = data;
     return data;
   } catch (error) {
@@ -173,6 +203,52 @@ export async function loadFunnelData(): Promise<FunnelData[]> {
   }
 }
 
+let cachedAffiliatePurchaseZips: string[] | null = null;
+
+export async function loadAffiliatePurchaseZips(): Promise<string[]> {
+  if (cachedAffiliatePurchaseZips) {
+    return cachedAffiliatePurchaseZips;
+  }
+  
+  try {
+    const response = await fetch('/data/territory-map/affiliate-purchase-zips.json', {
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      console.warn('Affiliate purchase zips file not found, returning empty array');
+      return [];
+    }
+    const data = await response.json();
+    cachedAffiliatePurchaseZips = data;
+    return data;
+  } catch (error) {
+    console.error('Error loading affiliate purchase zips:', error);
+    return [];
+  }
+}
+
+export async function loadAffiliateFunnelData(): Promise<AffiliateFunnelData[]> {
+  if (cachedAffiliateFunnelData) {
+    return cachedAffiliateFunnelData;
+  }
+  
+  try {
+    const response = await fetch('/data/territory-map/affiliate-funnel-data.json', {
+      cache: 'no-store'
+    });
+    if (!response.ok) {
+      console.warn('Affiliate funnel data file not found, returning empty array');
+      return [];
+    }
+    const data = await response.json();
+    cachedAffiliateFunnelData = data;
+    return data;
+  } catch (error) {
+    console.error('Error loading affiliate funnel data:', error);
+    return [];
+  }
+}
+
 // Clear cache functions
 export function clearTerritoriesCache(): void {
   cachedTerritories = null;
@@ -194,11 +270,16 @@ export function clearFunnelDataCache(): void {
   cachedFunnelData = null;
 }
 
+export function clearAffiliateFunnelDataCache(): void {
+  cachedAffiliateFunnelData = null;
+}
+
 export function clearAllCache(): void {
   cachedTerritories = null;
   cachedAssignments = null;
   cachedRepresentatives = null;
   cachedZipCodeMetadata = null;
   cachedFunnelData = null;
+  cachedAffiliateFunnelData = null;
 }
 

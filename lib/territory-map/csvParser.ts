@@ -1,5 +1,5 @@
 import Papa from 'papaparse';
-import type { FunnelData, ZipCodeMetadata } from '@/types/territory-map';
+import type { FunnelData, ZipCodeMetadata, AffiliateFunnelData } from '@/types/territory-map';
 
 /**
  * Parse funnel data CSV
@@ -84,9 +84,136 @@ export function parseMetricsCSV(csvText: string): ZipCodeMetadata {
 }
 
 /**
+ * Parse affiliate funnel CSV (All-Affiliate-Funnel.csv)
+ */
+export function parseAffiliateFunnelCSV(csvText: string): AffiliateFunnelData[] {
+  const result = Papa.parse(csvText, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => {
+      // Map CSV headers to camelCase property names
+      const headerMap: Record<string, string> = {
+        'id': 'id',
+        'lead source': 'leadSource',
+        'lead source details': 'leadSourceDetails',
+        'lead create date': 'leadCreateDate',
+        'first name': 'firstName',
+        'last name': 'lastName',
+        'phone': 'phone',
+        'email': 'email',
+        'street': 'street',
+        'city': 'city',
+        'state': 'state',
+        'zip': 'zip',
+        'territory': 'territory',
+        'ef score': 'efScore',
+        'think unlimited prospect score': 'thinkUnlimitedProspectScore',
+        'think unlimited schedule score': 'thinkUnlimitedScheduleScore',
+        'set': 'set',
+        'set date': 'setDate',
+        'appt canceled': 'apptCanceled',
+        'no pitch': 'noPitch',
+        'pitch': 'pitch',
+        'pitch date': 'pitchDate',
+        'credit ran': 'creditRan',
+        'credit score': 'creditScore',
+        'lender approved': 'lenderApproved',
+        'finance decline': 'financeDecline',
+        'finance rejected by customer': 'financeRejectedByCustomer',
+        'cash deal': 'cashDeal',
+        'sold': 'sold',
+        'sold date': 'soldDate',
+        'sold amount': 'soldAmount',
+        'sale canceled': 'saleCanceled',
+        'sale canceled date': 'saleCanceledDate',
+        'installed': 'installed',
+        'installed date': 'installedDate',
+        'installed # of windows': 'installedNumberOfWindows',
+        'installed revenue': 'installedRevenue',
+      };
+      
+      const normalized = header.trim().toLowerCase();
+      return headerMap[normalized] || normalized.replace(/\s+/g, '');
+    }
+  });
+  
+  if (result.errors.length > 0) {
+    console.warn('CSV parsing errors:', result.errors);
+  }
+  
+  const affiliateFunnelData: AffiliateFunnelData[] = [];
+  
+  for (const row of result.data as any[]) {
+    if (!row.id) continue; // Skip rows without ID
+    
+    // Helper function to parse numeric values
+    const parseNumber = (value: any): number | null => {
+      if (value === null || value === undefined || value === '') return null;
+      const num = parseFloat(value);
+      return isNaN(num) ? null : num;
+    };
+    
+    // Helper function to parse boolean/numeric flags (0 or 1)
+    const parseFlag = (value: any): number => {
+      if (value === null || value === undefined || value === '') return 0;
+      const num = parseFloat(value);
+      return isNaN(num) ? 0 : num;
+    };
+    
+    // Helper function to parse date strings
+    const parseDate = (value: any): string | null => {
+      if (!value || value === '') return null;
+      return String(value).trim();
+    };
+    
+    affiliateFunnelData.push({
+      id: String(row.id || '').trim(),
+      leadSource: String(row.leadSource || '').trim(),
+      leadSourceDetails: String(row.leadSourceDetails || '').trim(),
+      leadCreateDate: String(row.leadCreateDate || '').trim(),
+      firstName: String(row.firstName || '').trim(),
+      lastName: String(row.lastName || '').trim(),
+      phone: String(row.phone || '').trim(),
+      email: String(row.email || '').trim(),
+      street: String(row.street || '').trim(),
+      city: String(row.city || '').trim(),
+      state: String(row.state || '').trim(),
+      zip: String(row.zip || '').trim().padStart(5, '0'),
+      territory: String(row.territory || '').trim(),
+      efScore: parseNumber(row.efScore),
+      thinkUnlimitedProspectScore: row.thinkUnlimitedProspectScore ? String(row.thinkUnlimitedProspectScore).trim() : null,
+      thinkUnlimitedScheduleScore: row.thinkUnlimitedScheduleScore ? String(row.thinkUnlimitedScheduleScore).trim() : null,
+      set: parseFlag(row.set),
+      setDate: parseDate(row.setDate),
+      apptCanceled: parseFlag(row.apptCanceled),
+      noPitch: parseFlag(row.noPitch),
+      pitch: parseFlag(row.pitch),
+      pitchDate: parseDate(row.pitchDate),
+      creditRan: parseFlag(row.creditRan),
+      creditScore: parseNumber(row.creditScore),
+      lenderApproved: parseFlag(row.lenderApproved),
+      financeDecline: parseFlag(row.financeDecline),
+      financeRejectedByCustomer: parseFlag(row.financeRejectedByCustomer),
+      cashDeal: parseFlag(row.cashDeal),
+      sold: parseFlag(row.sold),
+      soldDate: parseDate(row.soldDate),
+      soldAmount: parseNumber(row.soldAmount),
+      saleCanceled: parseFlag(row.saleCanceled),
+      saleCanceledDate: parseDate(row.saleCanceledDate),
+      installed: parseFlag(row.installed),
+      installedDate: parseDate(row.installedDate),
+      installedNumberOfWindows: parseNumber(row.installedNumberOfWindows),
+      installedRevenue: parseNumber(row.installedRevenue),
+    });
+  }
+  
+  return affiliateFunnelData;
+}
+
+/**
  * Validate CSV format
  */
-export function validateCSVFormat(csvText: string, type: 'funnel' | 'metrics'): { valid: boolean; errors: string[] } {
+export function validateCSVFormat(csvText: string, type: 'funnel' | 'metrics' | 'affiliateFunnel'): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
   
   try {
@@ -114,6 +241,13 @@ export function validateCSVFormat(csvText: string, type: 'funnel' | 'metrics'): 
       if (!headerLower.some(h => h.includes('zip'))) {
         errors.push('Missing zip code column');
       }
+    } else if (type === 'affiliateFunnel') {
+      if (!headerLower.some(h => h.includes('id'))) {
+        errors.push('Missing Id column');
+      }
+      if (!headerLower.some(h => h.includes('zip'))) {
+        errors.push('Missing Zip column');
+      }
     }
     
     return { valid: errors.length === 0, errors };
@@ -122,4 +256,5 @@ export function validateCSVFormat(csvText: string, type: 'funnel' | 'metrics'): 
     return { valid: false, errors };
   }
 }
+
 

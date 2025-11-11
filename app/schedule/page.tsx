@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomerInfoForm } from '@/components/booking/CustomerInfoForm';
 import { PhoneLookup } from '@/components/booking/PhoneLookup';
 import { QualifyingQuestions, type QualifyingQuestionsData } from '@/components/booking/QualifyingQuestions';
 import { CallScript } from '@/components/booking/CallScript';
 import { Button } from '@/components/ui/button';
-import dynamic from 'next/dynamic';
 import { AvailabilityGrid } from '@/components/booking/AvailabilityGrid';
 import { BookingModal } from '@/components/booking/BookingModal';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -15,24 +14,25 @@ import { calculateAvailabilityGrid } from '@/lib/availability';
 import { loadReps, loadAvailability, getAllAppointments, loadLeads } from '@/lib/data-loader';
 import type { Address, SlotAvailability, Lead } from '@/types';
 import { addDays } from 'date-fns';
-
-// Dynamically import EnhancedScheduleMap to avoid SSR issues with Leaflet
-const EnhancedScheduleMap = dynamic(() => import('@/components/booking/EnhancedScheduleMap').then(mod => ({ default: mod.EnhancedScheduleMap })), {
-  ssr: false,
-  loading: () => <div className="h-[500px] w-full rounded-lg border border-gray-300 flex items-center justify-center bg-gray-50">
-    <div className="text-navy">Loading map...</div>
-  </div>
-});
-
-// Declare Google Maps types
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { createPresenceController, type PresenceUser } from '@/lib/presence';
+import { useUser } from '@clerk/nextjs';
 
 function ScheduleContent() {
   const searchParams = useSearchParams();
+  const { user } = useUser();
+  const currentPresenceUser: PresenceUser | null = user
+    ? {
+        userId: user.id,
+        firstName: user.firstName || '',
+        lastName: user.lastName || '',
+      }
+    : null;
+  // Lead presence temporarily disabled for performance
+  // const leadPresenceCtrl = useMemo(
+  //   () => createPresenceController('lead', currentPresenceUser),
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  //   [currentPresenceUser?.userId]
+  // );
   
   // Parse URL params synchronously on first render to set initial state
   const parseInitialUrlParams = () => {
@@ -189,6 +189,7 @@ function ScheduleContent() {
     setCurrentLead(lead);
     setLeadSelected(true);
     setIsEditingCustomer(false);
+    // Lead presence temporarily disabled
     
     // Populate customer info from lead
     const nameParts = lead.name.split(' ');
@@ -222,6 +223,14 @@ function ScheduleContent() {
       handleAddressSearch(lead.address);
     }
   };
+  
+  // Lead presence temporarily disabled
+  // useEffect(() => {
+  //   // Ensure presence is cleared if we navigate away or deselect
+  //   return () => {
+  //     leadPresenceCtrl.setActive(null);
+  //   };
+  // }, []);
 
   // Handle saving customer edits
   const handleSaveCustomer = async () => {
@@ -580,25 +589,6 @@ function ScheduleContent() {
                   weekOffset={weekOffset}
                 />
               )}
-            </div>
-          )}
-
-          {/* Map Section */}
-          {leadSelected && customerAddress && (
-            <div className="bg-white rounded-lg shadow-md border border-gray-300 p-6">
-              <h2 className="text-xl font-semibold text-navy mb-4">
-                Appointment Map
-              </h2>
-              <div className="mb-4 text-sm text-navy/70">
-                <p className="font-medium">{customerAddress.street}</p>
-                <p>{customerAddress.city}, {customerAddress.state} {customerAddress.zip}</p>
-              </div>
-              <EnhancedScheduleMap
-                customerAddress={customerAddress}
-                appointments={appointments}
-                reps={reps}
-                availability={availabilityData}
-              />
             </div>
           )}
 

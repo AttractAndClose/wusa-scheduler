@@ -5,8 +5,6 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { CensusStats } from '@/components/booking/CensusStats';
 import type { Address } from '@/types';
 
-export const dynamic = 'force-dynamic';
-
 export default function ZipDemographicsPage() {
   const [zipCode, setZipCode] = useState<string>('');
   const [submittedZip, setSubmittedZip] = useState<string>('');

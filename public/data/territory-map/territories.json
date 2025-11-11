@@ -1,21 +1,380 @@
 [
   {
     "id": "territory-1",
-    "name": "North Region",
+    "name": "Charlotte",
     "color": "#FF6B6B",
-    "createdAt": "2025-01-15T10:00:00Z"
+    "createdAt": "2025-11-10T19:48:21.318Z"
   },
   {
     "id": "territory-2",
-    "name": "South Region",
+    "name": "West NC/ Rural",
     "color": "#4ECDC4",
-    "createdAt": "2025-01-15T10:00:00Z"
+    "createdAt": "2025-11-10T19:48:21.319Z"
   },
   {
     "id": "territory-3",
-    "name": "East Region",
+    "name": "Raleigh - Greensboro",
     "color": "#45B7D1",
-    "createdAt": "2025-01-15T10:00:00Z"
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-4",
+    "name": "Fayetteville NC",
+    "color": "#FFA07A",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-5",
+    "name": "East SC",
+    "color": "#98D8C8",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-6",
+    "name": "West SC",
+    "color": "#F7DC6F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-7",
+    "name": "Atlanta",
+    "color": "#BB8FCE",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-8",
+    "name": "East Georgia",
+    "color": "#85C1E2",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-9",
+    "name": "Northwest Georgia",
+    "color": "#F8B739",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-10",
+    "name": "Columbus, GA",
+    "color": "#52BE80",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-11",
+    "name": "Macon",
+    "color": "#EC7063",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-12",
+    "name": "North Rural Georgia",
+    "color": "#5DADE2",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-13",
+    "name": "Southeast Georgia/Rural",
+    "color": "#F39C12",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-14",
+    "name": "Albany",
+    "color": "#1ABC9C",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-15",
+    "name": "Birmingham",
+    "color": "#9B59B6",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-16",
+    "name": "Montgomery/Auburn",
+    "color": "#E74C3C",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-17",
+    "name": "North Alabama",
+    "color": "#3498DB",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-18",
+    "name": "Mobile",
+    "color": "#F1C40F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-19",
+    "name": "South Alabama",
+    "color": "#16A085",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-20",
+    "name": "Nashville",
+    "color": "#8E44AD",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-21",
+    "name": "Jackson TN",
+    "color": "#C0392B",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-22",
+    "name": "Chattanooga",
+    "color": "#2980B9",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-23",
+    "name": "Memphis",
+    "color": "#D68910",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-24",
+    "name": "Knoxville",
+    "color": "#138D75",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-25",
+    "name": "Tupelo",
+    "color": "#7D3C98",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-26",
+    "name": "Greenville MS",
+    "color": "#A93226",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-27",
+    "name": "Starkville/Columbus, MS",
+    "color": "#1F618D",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-28",
+    "name": "Jackson MS",
+    "color": "#B9770E",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-29",
+    "name": "Hattiesburg",
+    "color": "#0E6655",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-30",
+    "name": "South Mississippi",
+    "color": "#633974",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-31",
+    "name": "Saint Louis",
+    "color": "#922B21",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-32",
+    "name": "Rural Missouri",
+    "color": "#154360",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-33",
+    "name": "Central Missouri",
+    "color": "#7E5109",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-34",
+    "name": "East Jonesboro",
+    "color": "#0B5345",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-35",
+    "name": "East Arkansas/Jonesboro",
+    "color": "#512E5F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-36",
+    "name": "Kansas City",
+    "color": "#641E16",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-37",
+    "name": "Joplin",
+    "color": "#0B3B4A",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-38",
+    "name": "Rural Kansas",
+    "color": "#4A3A08",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-39",
+    "name": "South Kansas",
+    "color": "#073A2F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-40",
+    "name": "Baton Rouge",
+    "color": "#3D1F3D",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-41",
+    "name": "South Louisiana",
+    "color": "#FF6B6B",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-42",
+    "name": "Central Louisiana",
+    "color": "#4ECDC4",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-43",
+    "name": "Monroe",
+    "color": "#45B7D1",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-44",
+    "name": "Shreveport",
+    "color": "#FFA07A",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-45",
+    "name": "Central 2 AR",
+    "color": "#98D8C8",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-46",
+    "name": "South Arkansas",
+    "color": "#F7DC6F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-47",
+    "name": "Central 1 AR",
+    "color": "#BB8FCE",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-48",
+    "name": "East Texas - Texarkana",
+    "color": "#85C1E2",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-49",
+    "name": "Northwest Arkansas",
+    "color": "#F8B739",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-50",
+    "name": "Fort Smith",
+    "color": "#52BE80",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-51",
+    "name": "Oklahoma City",
+    "color": "#EC7063",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-52",
+    "name": "Ardmore",
+    "color": "#5DADE2",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-53",
+    "name": "West OK",
+    "color": "#F39C12",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-54",
+    "name": "Austin",
+    "color": "#1ABC9C",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-55",
+    "name": "Broken Bow",
+    "color": "#9B59B6",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-56",
+    "name": "West Texas",
+    "color": "#E74C3C",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-57",
+    "name": "Tulsa",
+    "color": "#3498DB",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-58",
+    "name": "Dallas-Ft. Worth",
+    "color": "#F1C40F",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-59",
+    "name": "College Station",
+    "color": "#16A085",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-60",
+    "name": "Houston",
+    "color": "#8E44AD",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-61",
+    "name": "Waco",
+    "color": "#C0392B",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-62",
+    "name": "San Antonio",
+    "color": "#2980B9",
+    "createdAt": "2025-11-10T19:48:21.319Z"
+  },
+  {
+    "id": "territory-63",
+    "name": "Corpus Christi",
+    "color": "#D68910",
+    "createdAt": "2025-11-10T19:48:21.319Z"
   }
 ]
-

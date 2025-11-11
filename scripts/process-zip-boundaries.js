@@ -14,19 +14,17 @@
 const fs = require('fs');
 const path = require('path');
 
-// Serviceable states from your app
+// Serviceable states from your app (excluding IL and KY)
 const SERVICEABLE_STATES = new Set([
-  'AL', 'AR', 'GA', 'IL', 'KS', 'KY', 'LA', 'MS', 'MO', 'NC', 'OK', 'SC', 'TN', 'TX'
+  'AL', 'AR', 'GA', 'KS', 'LA', 'MS', 'MO', 'NC', 'OK', 'SC', 'TN', 'TX'
 ]);
 
-// Zip code ranges for each state (for validation)
+// Zip code ranges for each state (for validation) - excluding IL and KY
 const STATE_ZIP_RANGES = {
   'AL': [[35004, 36925]],
   'AR': [[71601, 72959]],
   'GA': [[30002, 31999], [39815, 39815], [39834, 39834], [39900, 39901]],
-  'IL': [[60001, 62999]],
   'KS': [[66002, 67954]],
-  'KY': [[40003, 42788]],
   'LA': [[70001, 71497]],
   'MS': [[38601, 39776]],
   'MO': [[63001, 65899]],
@@ -60,9 +58,10 @@ function getStateFromZip(zipCode) {
 }
 
 function extractZipCode(feature) {
-  // Try different property names
+  // Try different property names, prioritizing zipCode since we set it
   const props = feature.properties || {};
-  return props.ZCTA5CE20 || 
+  return props.zipCode ||
+         props.ZCTA5CE20 || 
          props.ZCTA5CE10 || 
          props.ZIP_CODE || 
          props.ZIPCODE || 
@@ -101,12 +100,16 @@ function processGeoJSON(inputPath, outputPath) {
       continue;
     }
     
-    // Ensure zip code is in properties with standard name
+    // Strip all properties except essential ones for rendering
+    // This significantly reduces file size
     feature.properties = {
-      ...feature.properties,
       zipCode: zipCode,
-      state: state
+      state: state,
+      territoryColor: '#ffffff' // Default color, will be updated dynamically
     };
+    
+    // Add feature ID for efficient updates (using zipCode as ID)
+    feature.id = zipCode;
     
     filteredFeatures.push(feature);
     filtered++;
@@ -124,7 +127,8 @@ function processGeoJSON(inputPath, outputPath) {
   console.log(`\nFiltered to ${filtered} zip codes in serviceable states`);
   console.log(`Writing to: ${outputPath}`);
   
-  fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+  // Write compact JSON (no pretty formatting) to reduce file size
+  fs.writeFileSync(outputPath, JSON.stringify(output));
   
   // Print statistics
   const stateCounts = {};

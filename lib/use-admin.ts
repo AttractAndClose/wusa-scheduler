@@ -1,9 +1,13 @@
 'use client';
 
-import { useOrganization, useOrganizationList } from '@clerk/nextjs';
+import { useOrganization, useOrganizationList, useUser } from '@clerk/nextjs';
 import { useMemo } from 'react';
 
 const ADMIN_ROLE = 'org:admin';
+
+// Email-based role constants
+export const SUPER_ADMIN_EMAIL = 'dan@windowsusa.com';
+export const RESTRICTED_ADMIN_EMAIL = 'admin@admin.com';
 
 /**
  * Client-side hook to check if the current user is an admin
@@ -119,5 +123,46 @@ export function useIsAdmin(): boolean {
     
     return false;
   }, [organizationList, isLoaded, activeOrg, activeMembership]);
+}
+
+/**
+ * Client-side hook to check if the current user's email matches a specific email address
+ * @param allowedEmail - The email address to check against (case-insensitive)
+ * @returns true if user's email matches, false otherwise
+ */
+export function useIsAuthorizedEmail(allowedEmail: string): boolean {
+  const { user, isLoaded } = useUser();
+  
+  return useMemo(() => {
+    if (!isLoaded || !user) {
+      return false;
+    }
+    
+    // Check all email addresses (primary and secondary)
+    const userEmails = user.emailAddresses.map(email => 
+      email.emailAddress.toLowerCase().trim()
+    );
+    const allowedEmailLower = allowedEmail.toLowerCase().trim();
+    
+    return userEmails.includes(allowedEmailLower);
+  }, [user, isLoaded, allowedEmail]);
+}
+
+/**
+ * Client-side hook to check if the current user is a super admin (dan@windowsusa.com)
+ * Super admins have access to all pages, tools, views, and features
+ * @returns true if user is a super admin, false otherwise
+ */
+export function useIsSuperAdmin(): boolean {
+  return useIsAuthorizedEmail(SUPER_ADMIN_EMAIL);
+}
+
+/**
+ * Client-side hook to check if the current user is a restricted admin (admin@admin.com)
+ * Restricted admins have limited access to specific pages only
+ * @returns true if user is a restricted admin, false otherwise
+ */
+export function useIsRestrictedAdmin(): boolean {
+  return useIsAuthorizedEmail(RESTRICTED_ADMIN_EMAIL);
 }
 

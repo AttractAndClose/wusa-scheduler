@@ -1,4 +1,5 @@
 import type { SalesRep, Appointment, Availability, Lead } from '@/types';
+import { logger } from '@/lib/logger';
 
 /**
  * Load data from JSON files
@@ -136,13 +137,13 @@ export async function loadLeads(): Promise<Lead[]> {
     
     const data = await response.json();
     cachedLeads = data;
-    console.log(`Loaded ${data.length} leads`);
+    logger.info(`Loaded ${data.length} leads`);
     return data;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('Timeout loading leads - file may be too large');
+      logger.warn('Timeout loading leads - file may be too large');
     } else {
-      console.error('Error loading leads:', error);
+      logger.error('Error loading leads:', error);
     }
     return [];
   }

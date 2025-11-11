@@ -5,6 +5,7 @@ import { Upload, FileText, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { parseFunnelCSV, parseMetricsCSV, validateCSVFormat } from '@/lib/territory-map/csvParser';
+import { logger } from '@/lib/logger';
 
 interface DataUploadProps {
   onUploadComplete?: () => void;
@@ -63,7 +64,7 @@ export default function DataUpload({ onUploadComplete }: DataUploadProps) {
         onUploadComplete();
       }
     } catch (error: any) {
-      console.error('Error uploading file:', error);
+      logger.error('Error uploading file:', error);
       setErrorMessage(error.message || 'Failed to upload file');
       setUploadStatus('error');
     } finally {

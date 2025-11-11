@@ -14,8 +14,6 @@ import type { Appointment } from '@/types';
 import { format, parseISO, isAfter, startOfDay, addDays, isSameDay } from 'date-fns';
 import { calculateDistance } from '@/lib/distance';
 
-export const dynamic = 'force-dynamic';
-
 function AppointmentsContent() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
@@ -496,10 +494,10 @@ function AppointmentsContent() {
                     return (
                       <div key={repId} className="space-y-2">
                         {/* Rep Header */}
-                        <div className="px-3 py-2 bg-red-600 rounded border border-gray-200">
-                          <h3 className="text-sm font-semibold text-white">{repName}</h3>
+                        <div className="px-3 py-2 bg-gray-200 rounded border border-gray-200">
+                          <h3 className="text-sm font-semibold text-navy">{repName}</h3>
                           {lastLocationAddress && (
-                            <div className="text-xs text-white/90 mt-1">{lastLocationAddress}</div>
+                            <div className="text-xs text-navy/90 mt-1">{lastLocationAddress}</div>
                           )}
                         </div>
 

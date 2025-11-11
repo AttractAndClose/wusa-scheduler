@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
-import type { Territory, TerritoryAssignment } from '@/types/territory-map';
-import { loadTerritories, loadAssignments } from '@/lib/territory-map/dataLoader';
+import type { Territory, TerritoryAssignment, Representative } from '@/types/territory-map';
+import { loadTerritories, loadAssignments, loadRepresentatives, loadAffiliatePurchaseZips } from '@/lib/territory-map/dataLoader';
 import { createTerritory, updateTerritory, deleteTerritory, assignZipCode } from '@/lib/territory-map/dataWriter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,8 @@ interface TerritorySidebarProps {
 export default function TerritorySidebar({ selectedZipCode, onTerritoryChange }: TerritorySidebarProps) {
   const [territories, setTerritories] = useState<Territory[]>([]);
   const [assignments, setAssignments] = useState<TerritoryAssignment>({});
+  const [representatives, setRepresentatives] = useState<Representative[]>([]);
+  const [affiliatePurchaseZips, setAffiliatePurchaseZips] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingTerritory, setEditingTerritory] = useState<Territory | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -31,12 +33,17 @@ export default function TerritorySidebar({ selectedZipCode, onTerritoryChange }:
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [territoriesData, assignmentsData] = await Promise.all([
+      const [territoriesData, assignmentsData, representativesData, affiliateZipsData] = await Promise.all([
         loadTerritories(),
-        loadAssignments()
+        loadAssignments(),
+        loadRepresentatives(),
+        loadAffiliatePurchaseZips()
       ]);
       setTerritories(territoriesData);
       setAssignments(assignmentsData);
+      setRepresentatives(representativesData);
+      setAffiliatePurchaseZips(affiliateZipsData);
+      console.log('Loaded affiliate purchase zips:', affiliateZipsData.length);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -92,9 +99,30 @@ export default function TerritorySidebar({ selectedZipCode, onTerritoryChange }:
     return Object.values(assignments).filter(id => id === territoryId).length;
   };
 
+  const getRepCount = (territoryId: string): number => {
+    return representatives.filter(rep => rep.territoryId === territoryId && rep.active).length;
+  };
+
+  const getPurchaseZipCount = (territoryId: string): number => {
+    if (!affiliatePurchaseZips || affiliatePurchaseZips.length === 0) {
+      return 0;
+    }
+    const territoryZipCodes = Object.entries(assignments)
+      .filter(([_, id]) => id === territoryId)
+      .map(([zipCode]) => zipCode.toString().trim());
+    const affiliateZipSet = new Set(affiliatePurchaseZips.map(z => z.toString().trim()));
+    const count = territoryZipCodes.filter(zip => affiliateZipSet.has(zip)).length;
+    return count;
+  };
+
+  const formatTerritoryName = (name: string): string => {
+    // Remove surrounding quotes if present
+    return name.replace(/^"|"$/g, '');
+  };
+
   if (isLoading) {
     return (
-      <div className="w-80 bg-white border-l border-gray-200 p-4">
+      <div className="w-96 bg-white border-l border-gray-200 p-4">
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           <p className="mt-2 text-sm text-navy">Loading...</p>
@@ -104,67 +132,85 @@ export default function TerritorySidebar({ selectedZipCode, onTerritoryChange }:
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
+    <div className="w-96 bg-white border-l border-gray-200 flex flex-col h-full min-h-0">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-navy">Territories</h2>
+      <div className="p-3 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-navy">Territories</h2>
           <Button
             size="sm"
             onClick={() => setShowCreateDialog(true)}
-            className="h-8"
+            className="h-7 text-xs"
           >
-            <Plus className="h-4 w-4 mr-1" />
+            <Plus className="h-3 w-3 mr-1" />
             New
           </Button>
         </div>
       </div>
 
       {/* Territory List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto">
         {territories.length === 0 ? (
-          <div className="text-center py-8 text-sm text-gray-500">
+          <div className="text-center py-8 text-sm text-gray-500 px-4">
             No territories yet. Create one to get started.
           </div>
         ) : (
-          territories.map((territory) => (
-            <Card key={territory.id} className="border-gray-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded"
-                      style={{ backgroundColor: territory.color }}
-                    />
-                    <CardTitle className="text-sm font-medium">{territory.name}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => setEditingTerritory(territory)}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-red-600 hover:text-red-700"
-                      onClick={() => handleDeleteTerritory(territory.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
+          <div className="border-t border-gray-200">
+            {/* Header Row */}
+            <div className="grid grid-cols-[40px_1fr_50px_50px_80px] border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+              <div className="px-2 py-1.5 flex items-center justify-center"></div>
+              <div className="px-2 py-1.5 flex items-center text-xs font-semibold text-gray-600">Territory</div>
+              <div className="px-2 py-1.5 flex items-center justify-center text-xs font-semibold text-gray-600">All</div>
+              <div className="px-2 py-1.5 flex items-center justify-center text-xs font-semibold text-gray-600">Purchase</div>
+              <div className="px-2 py-1.5 flex items-center justify-end"></div>
+            </div>
+            {/* Territory Rows */}
+            {territories.map((territory) => (
+              <div
+                key={territory.id}
+                className="grid grid-cols-[40px_1fr_50px_50px_80px] border-b border-gray-200 hover:bg-gray-50"
+              >
+                {/* Color Label */}
+                <div className="px-2 py-1 flex items-center justify-center">
+                  <div
+                    className="w-3 h-3 rounded border border-gray-300"
+                    style={{ backgroundColor: territory.color }}
+                  />
                 </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-xs text-gray-500">
-                  {getZipCodeCount(territory.id)} zip codes
-                </p>
-              </CardContent>
-            </Card>
-          ))
+                {/* Territory Name */}
+                <div className="px-2 py-1 flex items-start text-xs font-medium text-gray-900 break-words">
+                  <span className="break-words">{formatTerritoryName(territory.name)}</span>
+                </div>
+                {/* Territory Zip Count */}
+                <div className="px-2 py-1 flex items-center justify-center text-xs text-gray-600">
+                  {getZipCodeCount(territory.id)}
+                </div>
+                {/* Purchase Zip Count */}
+                <div className="px-2 py-1 flex items-center justify-center text-xs text-gray-600">
+                  {getPurchaseZipCount(territory.id)}
+                </div>
+                {/* Action Buttons - Edit and Trash together */}
+                <div className="px-2 py-1 flex items-center justify-end gap-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5"
+                    onClick={() => setEditingTerritory(territory)}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-red-600 hover:text-red-700"
+                    onClick={() => handleDeleteTerritory(territory.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
@@ -182,7 +228,7 @@ export default function TerritorySidebar({ selectedZipCode, onTerritoryChange }:
               <option value="">Unassigned</option>
               {territories.map((territory) => (
                 <option key={territory.id} value={territory.id}>
-                  {territory.name}
+                  {formatTerritoryName(territory.name)}
                 </option>
               ))}
             </select>

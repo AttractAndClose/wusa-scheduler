@@ -10,32 +10,11 @@
 
 @layer utilities {
   /* Ensure white checkmark for red checkboxes - Radix UI checkboxes */
-  [data-state="checked"][class*="bg-red"] .text-current,
-  [data-state="checked"].bg-red-500 .text-current,
-  [data-state="checked"].bg-red-600 .text-current,
-  [data-state="checked"].bg-red-700 .text-current,
-  [data-state="checked"].bg-primary .text-current {
+  [data-state="checked"].bg-primary [data-radix-checkbox-indicator],
+  [data-state="checked"].bg-primary .text-current,
+  [data-state="checked"][class*="bg-red"] [data-radix-checkbox-indicator],
+  [data-state="checked"][class*="bg-red"] .text-current {
     color: white !important;
-  }
-  
-  /* Ensure white checkmark for red checkboxes - Native HTML checkboxes */
-  /* Use accent-color for red checkboxes to ensure white checkmark */
-  input[type="checkbox"]:checked[class*="bg-red"],
-  input[type="checkbox"]:checked.bg-red-500,
-  input[type="checkbox"]:checked.bg-red-600,
-  input[type="checkbox"]:checked.bg-red-700,
-  input[type="checkbox"]:checked.bg-primary {
-    accent-color: #E11B37;
-    background-color: #E11B37;
-    border-color: #E11B37;
-  }
-  
-  /* For any checkbox with red styling, ensure white checkmark */
-  input[type="checkbox"][class*="text-red"]:checked,
-  input[type="checkbox"][class*="bg-red"]:checked {
-    accent-color: #E11B37;
-    background-color: #E11B37;
-    border-color: #E11B37;
   }
 }
 

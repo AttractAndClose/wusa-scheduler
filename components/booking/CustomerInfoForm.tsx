@@ -7,6 +7,7 @@ import { Search } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import type { Address } from '@/types';
 import { isZipServiceable } from '@/lib/serviceable-zips';
+import { logger } from '@/lib/logger';
 
 // Declare Google Maps types
 declare global {
@@ -366,12 +367,12 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
   };
 
   const handleAddressFound = async (address: Address) => {
-    console.log('Address found:', address);
-    console.log('Address coordinates:', { lat: address.lat, lng: address.lng });
+    logger.debug('Address found:', address);
+    logger.debug('Address coordinates:', { lat: address.lat, lng: address.lng });
     
     // Validate coordinates
     if (!address.lat || !address.lng || address.lat === 0 || address.lng === 0) {
-      console.error('Invalid address coordinates:', address);
+      logger.error('Invalid address coordinates:', address);
       setAddressError('Could not determine address location. Please try selecting from suggestions or re-enter the address.');
       return;
     }
@@ -389,7 +390,7 @@ export function CustomerInfoForm({ onSearch, isLoading, initialData, onCustomerI
     }
     
     // Zip is serviceable, proceed with search
-    console.log('Address is serviceable, calling onSearch');
+    logger.debug('Address is serviceable, calling onSearch');
     onSearch(address);
   };
 

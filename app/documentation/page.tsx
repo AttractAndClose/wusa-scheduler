@@ -8,9 +8,6 @@ import { useIsAdmin } from '@/lib/use-admin';
 import { Card } from '@/components/ui/card';
 import { BookOpen } from 'lucide-react';
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 function DocumentationContent() {
   const { isLoaded, isSignedIn } = useUser();
   const isAdmin = useIsAdmin();

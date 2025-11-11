@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Phone, User, Mail, MapPin } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { format, parseISO } from 'date-fns';
-import type { Lead } from '@/types';
+import type { Appointment, Lead } from '@/types';
+import { getAllAppointments } from '@/lib/data-loader';
 
 interface PhoneLookupProps {
   onLeadSelect: (lead: Lead) => void;
@@ -26,6 +27,8 @@ export function PhoneLookup({ onLeadSelect, isLoading = false, leads }: PhoneLoo
   const [searchResults, setSearchResults] = useState<Lead[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoadingAppointments, setIsLoadingAppointments] = useState(false);
 
   // Normalize phone number for comparison (remove formatting)
   const normalizePhone = (phone: string): string => {
@@ -106,13 +109,64 @@ export function PhoneLookup({ onLeadSelect, isLoading = false, leads }: PhoneLoo
       return matches;
     });
 
-    setSearchResults(matchingLeads);
+    // For Maria Ellis specifically, limit to 2 leads (original and first duplicate)
+    let filteredLeads = matchingLeads;
+    const mariaEllisPhone = normalizePhone('470-202-5009');
+    const isMariaEllisSearch = hasPhone && normalizePhone(phoneNumber) === mariaEllisPhone;
+    
+    if (isMariaEllisSearch && matchingLeads.length > 2) {
+      // Keep only the original lead and the first duplicate (dup1), exclude dup2
+      filteredLeads = matchingLeads
+        .filter(lead => !lead.id.includes('dup2'))
+        .slice(0, 2);
+    }
+    
+    setSearchResults(filteredLeads);
     setIsSearching(false);
 
     // If only one result, auto-select it
-    if (matchingLeads.length === 1) {
-      onLeadSelect(matchingLeads[0]);
+    if (filteredLeads.length === 1) {
+      onLeadSelect(filteredLeads[0]);
     }
+  };
+
+  // Lazy-load appointments when we have search results to annotate
+  useEffect(() => {
+    let cancelled = false;
+    const loadApts = async () => {
+      try {
+        setIsLoadingAppointments(true);
+        const data = await getAllAppointments();
+        if (!cancelled) setAppointments(data);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setIsLoadingAppointments(false);
+      }
+    };
+    if (hasSearched && searchResults.length > 0 && appointments.length === 0) {
+      loadApts();
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSearched, searchResults.length, appointments.length]);
+
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+
+  const getPastAppointmentsForLead = (lead: Lead): Appointment[] => {
+    if (appointments.length === 0) return [];
+    const leadPhone = normalizePhone(lead.phone);
+    return appointments.filter((apt) => {
+      const isPast = apt.date < todayStr;
+      if (!isPast) return false;
+      // If appointment has a leadId, only match that specific lead
+      if (apt.leadId) {
+        return apt.leadId === lead.id;
+      }
+      // Otherwise, match by phone number
+      return apt.customerPhone ? normalizePhone(apt.customerPhone) === leadPhone : false;
+    }).sort((a, b) => (a.date < b.date ? 1 : -1));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -280,86 +334,117 @@ export function PhoneLookup({ onLeadSelect, isLoading = false, leads }: PhoneLoo
               </p>
             </Card>
           ) : searchResults.length === 1 ? (
-            <Card className="p-4 bg-green-50 border-green-200">
-              <p className="text-sm text-green-800 font-medium mb-2">Lead found and loaded!</p>
-              <div className="text-xs text-green-700">
-                <p><strong>Name:</strong> {searchResults[0].name}</p>
-                <p><strong>Email:</strong> {searchResults[0].email}</p>
-                <p><strong>Phone:</strong> {searchResults[0].phone}</p>
-                {searchResults[0].address && (
-                  <p><strong>Address:</strong> {searchResults[0].address.street}, {searchResults[0].address.city}, {searchResults[0].address.state} {searchResults[0].address.zip}</p>
-                )}
-              </div>
-            </Card>
+            <>
+              <Card className="p-4 bg-green-50 border-green-200">
+                <p className="text-sm text-green-800 font-medium mb-2">Lead found and loaded!</p>
+                <div className="text-xs text-green-700">
+                  <p><strong>Name:</strong> {searchResults[0].name}</p>
+                  <p><strong>Email:</strong> {searchResults[0].email}</p>
+                  <p><strong>Phone:</strong> {searchResults[0].phone}</p>
+                  {searchResults[0].address && (
+                    <p><strong>Address:</strong> {searchResults[0].address.street}, {searchResults[0].address.city}, {searchResults[0].address.state} {searchResults[0].address.zip}</p>
+                  )}
+                </div>
+              </Card>
+              {(() => {
+                const past = getPastAppointmentsForLead(searchResults[0]);
+                if (past.length === 0) return null;
+                const mostRecent = past[0];
+                return (
+                  <Card className="p-4 mt-2 bg-yellow-50 border-yellow-200">
+                    <p className="text-sm text-yellow-800 font-medium mb-1">Previous appointment found</p>
+                    <div className="text-xs text-yellow-800">
+                      <div><strong>Date:</strong> {format(parseISO(mostRecent.date), 'MMM d, yyyy')} at {mostRecent.timeSlot}</div>
+                      <div><strong>Status:</strong> {mostRecent.appointmentStatus || mostRecent.status}</div>
+                      {mostRecent.reason && (<div><strong>Reason:</strong> {mostRecent.reason}</div>)}
+                    </div>
+                  </Card>
+                );
+              })()}
+            </>
           ) : (
             <div className="space-y-2">
               <p className="text-sm font-medium text-navy mb-3">
                 Found {searchResults.length} leads matching your search. Please select one:
               </p>
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {searchResults.map((lead) => (
-                  <Card
-                    key={lead.id}
-                    className="p-4 hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors"
-                    onClick={() => handleLeadClick(lead)}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-navy">{lead.name}</h4>
-                          {lead.status && (
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              lead.status === 'converted' ? 'bg-green-100 text-green-800' :
-                              lead.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
-                              lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {lead.status}
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
-                          <div>
-                            <span className="font-medium">Email:</span> {lead.email}
+              <div className="space-y-2">
+                {searchResults.map((lead) => {
+                  const past = getPastAppointmentsForLead(lead);
+                  const mostRecent = past[0];
+                  return (
+                    <Card
+                      key={lead.id}
+                      className="p-4 hover:bg-gray-50 cursor-pointer border border-gray-200 transition-colors"
+                      onClick={() => handleLeadClick(lead)}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-navy">{lead.name}</h4>
+                            {lead.status && (
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                lead.status === 'converted' ? 'bg-green-100 text-green-800' :
+                                lead.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
+                                lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {lead.status}
+                              </span>
+                            )}
                           </div>
-                          <div>
-                            <span className="font-medium">Phone:</span> {lead.phone}
-                          </div>
-                          <div>
-                            <span className="font-medium">Created:</span>{' '}
-                            {format(parseISO(lead.createdAt), 'MMM d, yyyy')}
-                          </div>
-                          {lead.leadSource && (
+                          <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
                             <div>
-                              <span className="font-medium">Source:</span> {lead.leadSource}
+                              <span className="font-medium">Email:</span> {lead.email}
                             </div>
-                          )}
-                          {lead.leadSourceDetails && (
-                            <div className="col-span-2">
-                              <span className="font-medium">Source Details:</span> {lead.leadSourceDetails}
+                            <div>
+                              <span className="font-medium">Phone:</span> {lead.phone}
                             </div>
-                          )}
-                          {lead.address && (
-                            <div className="col-span-2">
-                              <span className="font-medium">Address:</span>{' '}
-                              {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
+                            <div>
+                              <span className="font-medium">Created:</span>{' '}
+                              {format(parseISO(lead.createdAt), 'MMM d, yyyy')}
                             </div>
+                            {lead.leadSource && (
+                              <div>
+                                <span className="font-medium">Source:</span> {lead.leadSource}
+                              </div>
+                            )}
+                            {lead.leadSourceDetails && (
+                              <div className="col-span-2">
+                                <span className="font-medium">Source Details:</span> {lead.leadSourceDetails}
+                              </div>
+                            )}
+                            {lead.address && (
+                              <div className="col-span-2">
+                                <span className="font-medium">Address:</span>{' '}
+                                {lead.address.street}, {lead.address.city}, {lead.address.state} {lead.address.zip}
+                              </div>
+                            )}
+                          </div>
+                          {mostRecent && (
+                            <Card className="p-3 mt-3 bg-yellow-50 border-yellow-200">
+                              <div className="text-xs text-yellow-800">
+                                <div className="font-medium mb-1">Previous appointment found</div>
+                                <div><strong>Date:</strong> {format(parseISO(mostRecent.date), 'MMM d, yyyy')} at {mostRecent.timeSlot}</div>
+                                <div><strong>Status:</strong> {mostRecent.appointmentStatus || mostRecent.status}</div>
+                                {mostRecent.reason && (<div><strong>Reason:</strong> {mostRecent.reason}</div>)}
+                              </div>
+                            </Card>
                           )}
                         </div>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLeadClick(lead);
+                          }}
+                          className="ml-4"
+                        >
+                          Select
+                        </Button>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLeadClick(lead);
-                        }}
-                        className="ml-4"
-                      >
-                        Select
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}

@@ -1,11 +1,63 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUser, UserButton, useClerk } from '@clerk/nextjs';
-import { Calendar, Users, Clock, MapPin, FileText, LogOut, BarChart3, Settings, BookOpen, LayoutDashboard, Layers } from 'lucide-react';
+import { Calendar, Users, Clock, MapPin, FileText, LogOut, BarChart3, Settings, BookOpen, LayoutDashboard, Layers, Link2, ChevronDown, ChevronRight, Sparkles, Building2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useIsAdmin } from '@/lib/use-admin';
+import { useIsAdmin, useIsAuthorizedEmail, useIsSuperAdmin, useIsRestrictedAdmin } from '@/lib/use-admin';
+
+const AUTHORIZED_AFFILIATE_EMAIL = 'dan@windowsusa.com';
+
+function NavDropdown({ item, pathname }: { item: any; pathname: string }) {
+  const [isOpen, setIsOpen] = useState(
+    item.children?.some((child: any) => pathname === child.href) || false
+  );
+  const Icon = item.icon;
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          'group w-full flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-navy hover:bg-gray-light hover:text-primary',
+          item.children?.some((child: any) => pathname === child.href) && 'bg-gray-light text-primary'
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <Icon className="h-5 w-5 text-navy group-hover:text-primary" />
+          {item.name}
+        </div>
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="ml-4 mt-1 space-y-1">
+          {item.children.map((child: any) => {
+            const ChildIcon = child.icon;
+            return (
+              <Link
+                key={child.name}
+                href={child.href}
+                className={cn(
+                  'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-navy/70 hover:bg-gray-light hover:text-primary',
+                  pathname === child.href && 'bg-gray-light text-primary font-semibold'
+                )}
+              >
+                <ChildIcon className="h-4 w-4" />
+                {child.name}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -16,6 +68,26 @@ const navigation = [
   { name: 'Scheduled Appointments', href: '/appointments', icon: Clock },
   { name: 'Serviceable Zip Codes', href: '/serviceable-zips', icon: FileText },
   { name: 'Zip Demographics', href: '/zip-demographics', icon: BarChart3 },
+  { 
+    name: 'Affiliate Management', 
+    icon: Link2, 
+    requiresAuth: true,
+    children: [
+      { name: 'Affiliate Partners', href: '/affiliate-management/partners', icon: Building2 },
+      { name: 'Performance Reports', href: '/affiliate-management/performance', icon: BarChart3 },
+    ]
+  },
+  { name: 'AI Analysis', href: '/ai-analysis', icon: Sparkles, requiresAuth: true },
+];
+
+// Pages allowed for restricted admin (admin@admin.com)
+const RESTRICTED_ADMIN_ALLOWED_PAGES = [
+  '/schedule',
+  '/map',
+  '/availability',
+  '/appointments',
+  '/documentation',
+  '/settings',
 ];
 
 export function Sidebar() {
@@ -24,11 +96,46 @@ export function Sidebar() {
   const { signOut } = useClerk();
   const router = useRouter();
   const isAdmin = useIsAdmin();
+  const isSuperAdmin = useIsSuperAdmin();
+  const isRestrictedAdmin = useIsRestrictedAdmin();
+  const isAuthorizedForAffiliate = useIsAuthorizedEmail(AUTHORIZED_AFFILIATE_EMAIL);
   
   // Debug logging (remove in production)
   if (process.env.NODE_ENV === 'development') {
-    console.log('Sidebar - isAdmin:', isAdmin, 'isLoaded:', isLoaded, 'user:', !!user);
+    console.log('Sidebar - isAdmin:', isAdmin, 'isSuperAdmin:', isSuperAdmin, 'isRestrictedAdmin:', isRestrictedAdmin, 'isLoaded:', isLoaded, 'user:', !!user);
   }
+  
+  // Helper function to check if a navigation item should be visible
+  const isNavigationItemVisible = (item: any): boolean => {
+    // Super admin sees everything
+    if (isSuperAdmin) {
+      return true;
+    }
+    
+    // Restricted admin only sees allowed pages
+    if (isRestrictedAdmin) {
+      // Check if this is a direct link
+      if (item.href) {
+        return RESTRICTED_ADMIN_ALLOWED_PAGES.includes(item.href);
+      }
+      // Check if this is a dropdown with children
+      if (item.children) {
+        // For dropdowns, check if any child is allowed
+        return item.children.some((child: any) => 
+          RESTRICTED_ADMIN_ALLOWED_PAGES.includes(child.href)
+        );
+      }
+      return false;
+    }
+    
+    // For other users, check requiresAuth flag
+    if (item.requiresAuth && !isAuthorizedForAffiliate) {
+      return false;
+    }
+    
+    // Default: show item
+    return true;
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -49,16 +156,40 @@ export function Sidebar() {
       </div>
 
       {/* Navigation - No highlight style */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 px-3 py-4 overflow-y-auto">
         {navigation.map((item) => {
           const Icon = item.icon;
+          
+          // Check if item should be visible based on user role
+          if (!isNavigationItemVisible(item)) {
+            return null;
+          }
+
+          // Handle dropdown items
+          if (item.children) {
+            // For restricted admin, filter children to only show allowed pages
+            let filteredChildren = item.children;
+            if (isRestrictedAdmin && !isSuperAdmin) {
+              filteredChildren = item.children.filter((child: any) =>
+                RESTRICTED_ADMIN_ALLOWED_PAGES.includes(child.href)
+              );
+              // If no children are allowed, don't show the dropdown
+              if (filteredChildren.length === 0) {
+                return null;
+              }
+            }
+            return (
+              <NavDropdown key={item.name} item={{ ...item, children: filteredChildren }} pathname={pathname} />
+            );
+          }
           
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={item.href!}
               className={cn(
-                'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-navy hover:bg-gray-light hover:text-primary'
+                'group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-navy hover:bg-gray-light hover:text-primary',
+                pathname === item.href && 'bg-gray-light text-primary'
               )}
             >
               <Icon className="h-5 w-5 text-navy group-hover:text-primary" />
@@ -72,8 +203,8 @@ export function Sidebar() {
       {isLoaded && (
         user ? (
           <div className="border-t border-gray-200 p-4 space-y-3">
-            {/* Admin links - only visible to admins, above user info */}
-            {isAdmin && (
+            {/* Documentation and Settings links - visible to super admin, restricted admin, and regular admins */}
+            {(isSuperAdmin || isRestrictedAdmin || isAdmin) && (
               <>
                 <Link
                   href="/documentation"
@@ -121,9 +252,9 @@ export function Sidebar() {
                     {user.emailAddresses[0].emailAddress}
                   </p>
                 )}
-                {isAdmin && (
+                {(isAdmin || isSuperAdmin || isRestrictedAdmin) && (
                   <p className="text-xs text-navy font-medium truncate mt-0.5">
-                    Admin
+                    {isSuperAdmin ? 'Super Admin' : isRestrictedAdmin ? 'Admin' : 'Admin'}
                   </p>
                 )}
               </div>

@@ -1,21 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { BarChart3, MapPin, Download, Database } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import TerritoryMap from '@/components/territory-map/TerritoryMap';
 import TerritorySidebar from '@/components/territory-map/TerritorySidebar';
-import DriveTimeLayer from '@/components/territory-map/DriveTimeLayer';
-import DataUpload from '@/components/territory-map/DataUpload';
-import VisualizationControls from '@/components/territory-map/VisualizationControls';
-import ExportButton from '@/components/territory-map/ExportButton';
-import { loadRepresentatives } from '@/lib/territory-map/dataLoader';
+import VisualizationModal from '@/components/territory-map/VisualizationModal';
+import DriveTimeModal from '@/components/territory-map/DriveTimeModal';
+import ExportModal from '@/components/territory-map/ExportModal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { loadRepresentatives, loadAffiliatePurchaseZips } from '@/lib/territory-map/dataLoader';
 import type { Representative, VisualizationData, VisualizationMetric, ColorScale } from '@/types/territory-map';
-
-export const dynamic = 'force-dynamic';
 
 export default function TerritoryMapPage() {
   const { isLoaded, isSignedIn } = useUser();
+  const router = useRouter();
   const [selectedZipCode, setSelectedZipCode] = useState<string | null>(null);
   const [representatives, setRepresentatives] = useState<Representative[]>([]);
   const [showDriveTime, setShowDriveTime] = useState(false);
@@ -28,6 +31,15 @@ export default function TerritoryMapPage() {
   const [visualizationMin, setVisualizationMin] = useState(0);
   const [visualizationMax, setVisualizationMax] = useState(100);
   const [isLoading, setIsLoading] = useState(true);
+  const [showVisualizationModal, setShowVisualizationModal] = useState(false);
+  const [showDriveTimeModal, setShowDriveTimeModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [zipFilterMode, setZipFilterMode] = useState<'all' | 'affiliate'>('all');
+  const [affiliatePurchaseZips, setAffiliatePurchaseZips] = useState<string[]>([]);
+  const [showRepMarkers, setShowRepMarkers] = useState(true);
+  const [showAllTerritoryZips, setShowAllTerritoryZips] = useState(true);
+  const [showAffiliatePurchaseZipsToggle, setShowAffiliatePurchaseZipsToggle] = useState(false);
+  const [showFunnelData, setShowFunnelData] = useState(false);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -48,8 +60,12 @@ export default function TerritoryMapPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const reps = await loadRepresentatives();
+      const [reps, affiliateZips] = await Promise.all([
+        loadRepresentatives(),
+        loadAffiliatePurchaseZips()
+      ]);
       setRepresentatives(reps);
+      setAffiliatePurchaseZips(affiliateZips);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -80,12 +96,6 @@ export default function TerritoryMapPage() {
     setShowDriveTime(true);
   };
 
-  const handleUploadComplete = () => {
-    if (visualizationMode === 'data') {
-      loadVisualizationData();
-    }
-  };
-
   if (!isLoaded) {
     return (
       <AppLayout>
@@ -101,49 +111,134 @@ export default function TerritoryMapPage() {
 
   return (
     <AppLayout>
-      <main className="flex h-[calc(100vh-4rem)]">
-        {/* Left Sidebar - Controls */}
-        <div className="w-80 bg-gray-50 border-r border-gray-200 overflow-y-auto p-4">
-          <h1 className="text-2xl font-bold text-navy mb-4">Territory Map</h1>
+      <main className="flex flex-col h-full min-h-0">
+        {/* Button Bar */}
+        <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <Button
+              variant={visualizationMode === 'data' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowVisualizationModal(true)}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Visualization
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDriveTimeModal(true)}
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Drive Time
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExportModal(true)}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push('/territory-map/data-sets')}
+            >
+              <Database className="h-4 w-4 mr-2" />
+              Data Sets
+            </Button>
+          </div>
           
-          <DataUpload onUploadComplete={handleUploadComplete} />
-          
-          <VisualizationControls
-            onModeChange={setVisualizationMode}
-            onMetricChange={setVisualizationMetric}
-            onColorScaleChange={setVisualizationColorScale}
-            currentMode={visualizationMode}
-            currentMetric={visualizationMetric}
-            currentColorScale={visualizationColorScale}
-            visualizationData={visualizationData}
-            onDataLoad={loadVisualizationData}
-          />
-          
-          <DriveTimeLayer
-            representatives={representatives}
-            onCalculate={handleDriveTimeCalculate}
-            isCalculating={false}
-            coveredZipCodes={driveTimeZipCodes}
-          />
-          
-          <ExportButton />
+          {/* Layer Toggles */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 border-l border-gray-300 pl-4">
+              <span className="text-sm font-medium text-gray-700 mr-2">Layers:</span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-reps"
+                    checked={showRepMarkers}
+                    onCheckedChange={(checked) => setShowRepMarkers(checked === true)}
+                  />
+                  <Label htmlFor="show-reps" className="text-sm text-gray-700 cursor-pointer">
+                    Reps
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-territory-zips"
+                    checked={showAllTerritoryZips && zipFilterMode === 'all'}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setShowAllTerritoryZips(isChecked);
+                      if (isChecked) {
+                        setZipFilterMode('all');
+                        setShowAffiliatePurchaseZipsToggle(false);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="show-territory-zips" className="text-sm text-gray-700 cursor-pointer">
+                    All Territory Zips
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-affiliate-zips"
+                    checked={showAffiliatePurchaseZipsToggle && zipFilterMode === 'affiliate'}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setShowAffiliatePurchaseZipsToggle(isChecked);
+                      if (isChecked) {
+                        setZipFilterMode('affiliate');
+                        setShowAllTerritoryZips(false);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="show-affiliate-zips" className="text-sm text-gray-700 cursor-pointer">
+                    Affiliate Purchase Zips
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="show-funnel-data"
+                    checked={showFunnelData}
+                    onCheckedChange={(checked) => {
+                      setShowFunnelData(checked === true);
+                      if (checked) {
+                        setVisualizationMode('data');
+                      }
+                    }}
+                  />
+                  <Label htmlFor="show-funnel-data" className="text-sm text-gray-700 cursor-pointer">
+                    Funnel Data
+                  </Label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Main Map Area */}
-        <div className="flex-1 flex">
-          <div className="flex-1 relative">
+        <div className="flex-1 flex overflow-hidden min-h-0">
+          <div className="flex-1 relative h-full w-full min-h-0">
             <TerritoryMap
               onZipCodeSelect={setSelectedZipCode}
               selectedZipCode={selectedZipCode}
               showDriveTime={showDriveTime}
               driveTimeMinutes={driveTimeMinutes}
               driveTimeZipCodes={driveTimeZipCodes}
-              showDataVisualization={visualizationMode === 'data'}
+              showDataVisualization={visualizationMode === 'data' || showFunnelData}
               visualizationData={visualizationData}
               visualizationMetric={visualizationMetric}
               visualizationMin={visualizationMin}
               visualizationMax={visualizationMax}
               visualizationColorScale={visualizationColorScale}
+              zipFilterMode={zipFilterMode}
+              affiliatePurchaseZips={affiliatePurchaseZips}
+              showRepMarkers={showRepMarkers}
+              showAllTerritoryZips={showAllTerritoryZips}
+              showAffiliatePurchaseZips={showAffiliatePurchaseZipsToggle}
+              showFunnelData={showFunnelData}
             />
           </div>
 
@@ -153,6 +248,34 @@ export default function TerritoryMapPage() {
             onTerritoryChange={loadData}
           />
         </div>
+
+        {/* Modals */}
+        <VisualizationModal
+          open={showVisualizationModal}
+          onOpenChange={setShowVisualizationModal}
+          currentMode={visualizationMode}
+          currentMetric={visualizationMetric}
+          currentColorScale={visualizationColorScale}
+          visualizationData={visualizationData}
+          onModeChange={setVisualizationMode}
+          onMetricChange={setVisualizationMetric}
+          onColorScaleChange={setVisualizationColorScale}
+          onDataLoad={loadVisualizationData}
+        />
+
+        <DriveTimeModal
+          open={showDriveTimeModal}
+          onOpenChange={setShowDriveTimeModal}
+          representatives={representatives}
+          onCalculate={handleDriveTimeCalculate}
+          isCalculating={false}
+          coveredZipCodes={driveTimeZipCodes}
+        />
+
+        <ExportModal
+          open={showExportModal}
+          onOpenChange={setShowExportModal}
+        />
       </main>
     </AppLayout>
   );
